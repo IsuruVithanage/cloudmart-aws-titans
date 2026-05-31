@@ -18,6 +18,10 @@ from flask import Flask, jsonify, request, abort
 import bcrypt
 import jwt as pyjwt
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from psycopg2.pool import SimpleConnectionPool
+
 # ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
@@ -112,22 +116,154 @@ class InMemoryUserStore:
 
 class PostgresUserStore:
     """
-    PostgreSQL adapter — students implement this for the assignment.
-
-    Set DB_BACKEND=postgres and provide:
-      DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-    or
-      DATABASE_URL (connection string)
-
-    Use psycopg2 or SQLAlchemy. Credentials should come from
-    your cloud provider's secret management service via workload identity.
+    AWS RDS PostgreSQL adapter.
+    Requires DB_BACKEND=postgres and DB_HOST, DB_NAME, DB_USER, DB_PASSWORD
     """
 
     def __init__(self):
-        raise NotImplementedError(
-            "PostgreSQL store not implemented yet. "
-            "See the assignment brief Section 3.1 for guidance."
-        )
+        # Fetch RDS connection parameters injected by Kubernetes
+        self.host = os.environ.get("DB_HOST")
+        self.port = os.environ.get("DB_PORT", "5432")
+        self.database = os.environ.get("DB_NAME")
+        self.user = os.environ.get("DB_USER")
+        self.password = os.environ.get("DB_PASSWORD")
+
+        if not all([self.host, self.database, self.user, self.password]):
+            raise ValueError("Missing required PostgreSQL environment variables (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD).")
+
+        try:
+            # Initialize a connection pool (Min: 1 connection, Max: 10 connections)
+            self.pool = SimpleConnectionPool(
+                1, 10,
+                host=self.host,
+                port=self.port,
+                database=self.database,
+                user=self.user,
+                password=self.password
+            )
+            logging.getLogger("user-service").info(f"Connected to PostgreSQL RDS at {self.host}")
+            self._init_db()
+        except Exception as e:
+            logging.getLogger("user-service").error(f"Failed to connect to PostgreSQL: {e}")
+            raise
+
+    def _init_db(self):
+        """Creates the users table if it doesn't already exist in RDS."""
+        create_table_query = """
+         CREATE TABLE IF NOT EXISTS users (
+              id VARCHAR(50) PRIMARY KEY,
+             email VARCHAR(255) UNIQUE NOT NULL,
+             name VARCHAR(255) NOT NULL,
+             "passwordHash" VARCHAR(255) NOT NULL,
+             role VARCHAR(50) DEFAULT 'customer',
+             address TEXT,
+             "createdAt" VARCHAR(50),
+             "updatedAt" VARCHAR(50)
+             );
+         """
+        conn = self.pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(create_table_query)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            logging.getLogger("user-service").error(f"Error creating table: {e}")
+        finally:
+            self.pool.putconn(conn)
+
+    def find_by_email(self, email):
+        conn = self.pool.getconn()
+        try:
+            # RealDictCursor ensures rows behave exactly like the old in-memory dictionaries
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute('SELECT * FROM users WHERE email = %s', (email,))
+                user = cur.fetchone()
+                return dict(user) if user else None
+        finally:
+            self.pool.putconn(conn)
+
+    def find_by_id(self, user_id):
+        conn = self.pool.getconn()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+                user = cur.fetchone()
+                return dict(user) if user else None
+        finally:
+            self.pool.putconn(conn)
+
+    def create(self, user_data):
+        conn = self.pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute('''
+                INSERT INTO users (id, email, name, "passwordHash", role, address, "createdAt")
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ''', (
+                    user_data['id'], user_data['email'], user_data['name'],
+                    user_data['passwordHash'], user_data.get('role', 'customer'),
+                    user_data.get('address', ''), user_data['createdAt']
+                ))
+            conn.commit()
+            return user_data
+        except psycopg2.IntegrityError:
+            conn.rollback()
+            raise ValueError(f"Email {user_data['email']} already exists.")
+        except Exception as e:
+            conn.rollback()
+            logging.getLogger("user-service").error(f"Error creating user: {e}")
+            raise
+        finally:
+            self.pool.putconn(conn)
+
+    def update(self, user_id, data):
+        user = self.find_by_id(user_id)
+        if not user:
+            return None
+
+        update_fields = []
+        update_values = []
+
+        # Dynamically build the SQL update based on provided data
+        for key in ["name", "address", "email"]:
+            if key in data:
+                update_fields.append(f"{key} = %s")
+                update_values.append(data[key])
+                user[key] = data[key]
+
+        if not update_fields:
+            return user
+
+        user["updatedAt"] = datetime.utcnow().isoformat() + "Z"
+        update_fields.append('"updatedAt" = %s')
+        update_values.append(user["updatedAt"])
+        update_values.append(user_id)
+
+        query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s"
+
+        conn = self.pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(query, tuple(update_values))
+            conn.commit()
+            return user
+        except Exception as e:
+            conn.rollback()
+            logging.getLogger("user-service").error(f"Error updating user: {e}")
+            raise
+        finally:
+            self.pool.putconn(conn)
+
+    def list_all(self):
+        conn = self.pool.getconn()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute('SELECT * FROM users')
+                users = cur.fetchall()
+                return [dict(u) for u in users]
+        finally:
+            self.pool.putconn(conn)
 
 
 def create_user_store():
