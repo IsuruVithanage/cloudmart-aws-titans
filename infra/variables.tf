@@ -1,5 +1,6 @@
 variable "environment" {
-  default = "dev"
+  description = "Deployment environment"
+  default     = "prod"
 }
 
 variable "cluster_name" {

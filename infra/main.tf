@@ -157,6 +157,179 @@ module "eks" {
   }
 }
 
+# VPC Flow Logs — Section 3.1 [D]
+resource "aws_flow_log" "cloudmart" {
+  iam_role_arn    = aws_iam_role.flow_log.arn
+  log_destination = aws_cloudwatch_log_group.flow_log.arn
+  traffic_type    = "ALL"
+  vpc_id          = module.vpc.vpc_id
+
+  tags = {
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+resource "aws_cloudwatch_log_group" "flow_log" {
+  name              = "/aws/vpc/cloudmart-flow-logs"
+  retention_in_days = 7
+
+  tags = {
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+resource "aws_iam_role" "flow_log" {
+  name = "cloudmart-flow-log-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "vpc-flow-logs.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "flow_log" {
+  name = "cloudmart-flow-log-policy"
+  role = aws_iam_role.flow_log.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+
+# ==================== SECURITY GROUPS — Section 3.1 [M] ====================
+
+resource "aws_security_group" "bastion" {
+  name        = "cloudmart-bastion-sg"
+  description = "Bastion host - SSH from trusted IPs only (least privilege)"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description = "SSH from anywhere - restrict to known IP in production"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow all outbound to reach VPC resources"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "cloudmart-bastion-sg"
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+resource "aws_security_group" "load_balancer" {
+  name        = "cloudmart-alb-sg"
+  description = "ALB - HTTP and HTTPS from internet only"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description = "HTTP from internet - redirects to HTTPS"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS from internet for frontend"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Forward to EKS nodes inside VPC only"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  tags = {
+    Name        = "cloudmart-alb-sg"
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+resource "aws_security_group" "database" {
+  name        = "cloudmart-db-sg"
+  description = "RDS PostgreSQL - private subnets only, never public internet"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description = "PostgreSQL from private app subnets only (least privilege)"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.11.0/24", "10.0.12.0/24"]
+  }
+
+  egress {
+    description = "RDS does not initiate outbound connections"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "cloudmart-db-sg"
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+output "bastion_sg_id" {
+  value = aws_security_group.bastion.id
+}
+
+output "load_balancer_sg_id" {
+  value = aws_security_group.load_balancer.id
+}
+
+output "database_sg_id" {
+  value = aws_security_group.database.id
+}
+
 # ==================== OUTPUTS ====================
 output "ecr_repository_urls" {
   value = { for k, v in aws_ecr_repository.services : k => v.repository_url }
