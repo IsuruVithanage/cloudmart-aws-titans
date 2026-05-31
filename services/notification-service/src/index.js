@@ -18,6 +18,9 @@ const express = require('express');
 const morgan = require('morgan');
 const axios = require('axios');
 
+const { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } = require('@aws-sdk/client-sqs');
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
+
 const app = express();
 const PORT = process.env.PORT || 8004;
 
@@ -27,7 +30,10 @@ const ORDER_SERVICE_URL =
 
 // Track processed events to avoid duplicates
 const processedEvents = new Set();
-const notificationLog = [];
+const notificationLog = []
+
+const sqsClient = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const sesClient = new SESClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 // ---------------------------------------------------------------------------
 // Email sending abstraction
@@ -39,18 +45,23 @@ async function sendEmail(to, subject, body) {
   const email = { to, subject, body, sentAt: new Date().toISOString() };
 
   if (backend === 'ses') {
-    // TODO: AWS SES — use @aws-sdk/client-ses
-    // const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
-    // const client = new SESClient({ region: process.env.AWS_REGION });
-    // await client.send(new SendEmailCommand({
-    //   Source: process.env.FROM_EMAIL,
-    //   Destination: { ToAddresses: [to] },
-    //   Message: {
-    //     Subject: { Data: subject },
-    //     Body: { Text: { Data: body } },
-    //   },
-    // }));
-    console.log(`[SES] Would send email to ${to}: ${subject}`);
+    try {
+      const fromEmail = process.env.FROM_EMAIL;
+      if (!fromEmail) throw new Error("FROM_EMAIL environment variable is missing");
+
+      const command = new SendEmailCommand({
+        Source: fromEmail,
+        Destination: { ToAddresses: [to] },
+        Message: {
+          Subject: { Data: subject },
+          Body: { Text: { Data: body } },
+        },
+      });
+      await sesClient.send(command);
+      console.log(`[SES] Sent email to ${to}: ${subject}`);
+    } catch (err) {
+      console.error(`[SES] Failed to send email to ${to}:`, err);
+    }
   } else if (backend === 'sendgrid') {
     // TODO: SendGrid (GCP / Azure) — use @sendgrid/mail
     // const sgMail = require('@sendgrid/mail');
@@ -161,22 +172,36 @@ async function pollCloudQueue() {
   const backend = (process.env.QUEUE_BACKEND || 'memory').toLowerCase();
 
   if (backend === 'sqs') {
-    // TODO: AWS SQS — use @aws-sdk/client-sqs
-    // const { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } = require('@aws-sdk/client-sqs');
-    // const client = new SQSClient({ region: process.env.AWS_REGION });
-    // const response = await client.send(new ReceiveMessageCommand({
-    //   QueueUrl: process.env.SQS_QUEUE_URL,
-    //   MaxNumberOfMessages: 10,
-    //   WaitTimeSeconds: 20,
-    // }));
-    // for (const msg of response.Messages || []) {
-    //   await processOrderEvent(JSON.parse(msg.Body));
-    //   await client.send(new DeleteMessageCommand({
-    //     QueueUrl: process.env.SQS_QUEUE_URL,
-    //     ReceiptHandle: msg.ReceiptHandle,
-    //   }));
-    // }
-    console.log('[SQS] Would poll for messages...');
+    try {
+      const queueUrl = process.env.SQS_QUEUE_URL;
+      if (!queueUrl) return;
+
+      const command = new ReceiveMessageCommand({
+        QueueUrl: queueUrl,
+        MaxNumberOfMessages: 10,
+        WaitTimeSeconds: 5, // Long polling to reduce API calls and costs
+      });
+
+      const response = await sqsClient.send(command);
+
+      for (const msg of response.Messages || []) {
+        try {
+          const event = JSON.parse(msg.Body);
+          await processOrderEvent(event);
+
+          // Crucial: Delete the message after processing so it doesn't trigger again
+          const deleteCommand = new DeleteMessageCommand({
+            QueueUrl: queueUrl,
+            ReceiptHandle: msg.ReceiptHandle,
+          });
+          await sqsClient.send(deleteCommand);
+        } catch (err) {
+          console.error('[SQS] Error processing individual message:', err);
+        }
+      }
+    } catch (err) {
+      console.error('[SQS] Error polling queue:', err);
+    }
   } else if (backend === 'pubsub') {
     // TODO: GCP Pub/Sub — use @google-cloud/pubsub
     // Pub/Sub uses push or streaming pull — implement subscription handler
