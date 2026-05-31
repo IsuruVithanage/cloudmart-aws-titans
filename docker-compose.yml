@@ -14,7 +14,7 @@ services:
       - FLASK_DEBUG=true
       - STORE_BACKEND=memory          # Change to dynamodb|firestore|cosmosdb for cloud
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
       interval: 10s
       timeout: 5s
       start_period: 30s
@@ -36,7 +36,7 @@ services:
       product-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8002/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8002/health"]
       interval: 10s
       timeout: 5s
       start_period: 30s
@@ -56,7 +56,7 @@ services:
       - DB_BACKEND=memory              # Change to postgres for cloud
       - JWT_SECRET=cloudmart-dev-secret-change-in-production
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health')"]
       interval: 10s
       timeout: 5s
       start_period: 30s
@@ -80,7 +80,7 @@ services:
       order-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8004/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8004/health"]
       interval: 10s
       timeout: 5s
       start_period: 30s
@@ -99,7 +99,7 @@ services:
       - order-service
       - user-service
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/health"]
       interval: 10s
       timeout: 5s
       start_period: 30s
