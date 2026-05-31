@@ -15,3 +15,8 @@ variable "owner_email" {
   description = "Owner email for resource tagging"
   default     = "isuruvithanagemv@gmail.com"
 }
+
+variable "db_password" {
+  description = "RDS master password — do not commit, pass via env or tfvars"
+  sensitive   = true
+}

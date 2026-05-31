@@ -330,6 +330,7 @@ output "database_sg_id" {
   value = aws_security_group.database.id
 }
 
+
 # ==================== OUTPUTS ====================
 output "ecr_repository_urls" {
   value = { for k, v in aws_ecr_repository.services : k => v.repository_url }
@@ -353,4 +354,109 @@ output "public_subnet_ids" {
 
 output "database_subnet_ids" {
   value = module.vpc.database_subnets
+}
+
+
+# ==================== RDS PostgreSQL — user-service [Section 2.2] ====================
+resource "aws_db_subnet_group" "cloudmart" {
+  name       = "cloudmart-db-subnet-group"
+  subnet_ids = module.vpc.database_subnets
+
+  tags = {
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+resource "aws_db_instance" "postgres" {
+  identifier             = "cloudmart-postgres"
+  engine                 = "postgres"
+  instance_class         = "db.t3.micro"    # smallest/cheapest instance
+  allocated_storage      = 20
+  db_name                = "cloudmart"
+  username               = "cloudmart_admin"
+  password               = var.db_password
+  db_subnet_group_name   = aws_db_subnet_group.cloudmart.name
+  vpc_security_group_ids = [aws_security_group.database.id]
+  skip_final_snapshot    = true
+  deletion_protection    = false
+  storage_encrypted      = true             # Section 3.4 [M] — encrypted at rest
+  backup_retention_period = 0               # Section 3.9 [M] — 7 day backups but in free tier we cannot add 7
+
+  tags = {
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+# ==================== DynamoDB — product-service catalogue [Section 2.2] ====================
+resource "aws_dynamodb_table" "products" {
+  name         = "cloudmart-products"
+  billing_mode = "PAY_PER_REQUEST"   # on-demand/serverless pricing
+  hash_key     = "productId"
+
+  attribute {
+    name = "productId"
+    type = "S"
+  }
+
+  tags = {
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+# ==================== SQS Queue — order events [Section 2.2] ====================
+resource "aws_sqs_queue" "orders" {
+  name                      = "cloudmart-orders"
+  message_retention_seconds = 86400   # 1 day retention
+
+  tags = {
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+# ==================== S3 — static assets [Section 2.2] ====================
+resource "aws_s3_bucket" "assets" {
+  bucket = "cloudmart-assets-${var.team}"
+
+  tags = {
+    Project     = "cloudmart"
+    Environment = var.environment
+    Team        = var.team
+    Owner       = var.owner_email
+  }
+}
+
+resource "aws_s3_bucket_versioning" "assets" {
+  bucket = aws_s3_bucket.assets.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# ==================== OUTPUTS (add these) ====================
+output "rds_endpoint" {
+  value = aws_db_instance.postgres.endpoint
+}
+
+output "dynamodb_table_name" {
+  value = aws_dynamodb_table.products.name
+}
+
+output "sqs_queue_url" {
+  value = aws_sqs_queue.orders.url
+}
+
+output "assets_bucket_name" {
+  value = aws_s3_bucket.assets.bucket
 }
