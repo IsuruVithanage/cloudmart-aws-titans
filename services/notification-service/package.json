@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.1057.0",
+    "@aws-sdk/client-sqs": "^3.1057.0",
     "axios": "^1.7.2",
     "express": "^4.19.2",
     "morgan": "^1.10.0"
