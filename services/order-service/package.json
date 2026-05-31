@@ -9,11 +9,12 @@
     "test": "jest --coverage"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "uuid": "^9.0.1",
+    "@aws-sdk/client-sqs": "^3.1057.0",
     "axios": "^1.7.2",
     "cors": "^2.8.5",
-    "morgan": "^1.10.0"
+    "express": "^4.19.2",
+    "morgan": "^1.10.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "jest": "^29.7.0"

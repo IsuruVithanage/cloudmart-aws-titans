@@ -19,6 +19,9 @@ const morgan = require('morgan');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 
+const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
+const sqsClient = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
+
 const app = express();
 const PORT = process.env.PORT || 8002;
 
@@ -70,15 +73,20 @@ async function publishOrderEvent(event) {
   const backend = (process.env.QUEUE_BACKEND || 'memory').toLowerCase();
 
   if (backend === 'sqs') {
-    // TODO: AWS SQS — use @aws-sdk/client-sqs
-    // const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
-    // const client = new SQSClient({ region: process.env.AWS_REGION });
-    // await client.send(new SendMessageCommand({
-    //   QueueUrl: process.env.SQS_QUEUE_URL,
-    //   MessageBody: JSON.stringify(event),
-    // }));
-    console.log('[SQS] Would publish event:', event.type);
-    eventLog.push(event);
+    try {
+      const queueUrl = process.env.SQS_QUEUE_URL;
+      if (!queueUrl) throw new Error("SQS_QUEUE_URL is missing");
+
+      const command = new SendMessageCommand({
+        QueueUrl: queueUrl,
+        MessageBody: JSON.stringify(event),
+      });
+
+      await sqsClient.send(command);
+      console.log(`[SQS] Published event: ${event.type} for order ${event.orderId}`);
+    } catch (err) {
+      console.error('[SQS] Failed to publish event:', err);
+    }
   } else if (backend === 'pubsub') {
     // TODO: GCP Pub/Sub — use @google-cloud/pubsub
     // const { PubSub } = require('@google-cloud/pubsub');
