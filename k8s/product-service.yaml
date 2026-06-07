@@ -27,23 +27,18 @@ spec:
         ports:
         - containerPort: 8001
         env:
-        - name: PORT
-          value: "8001"
-        - name: STORE_BACKEND
-          valueFrom:
-            configMapKeyRef:
-              name: cloudmart-config
-              key: PRODUCT_STORE_BACKEND
-        - name: AWS_REGION
-          valueFrom:
-            configMapKeyRef:
-              name: cloudmart-config
-              key: AWS_REGION
-        - name: DYNAMODB_TABLE_NAME
-          valueFrom:
-            configMapKeyRef:
-              name: cloudmart-config
-              key: DYNAMODB_TABLE_NAME
+          - name: PORT
+            value: "8001"
+          - name: STORE_BACKEND
+            valueFrom:
+              configMapKeyRef:
+                name: cloudmart-config
+                key: PRODUCT_STORE_BACKEND
+          - name: DYNAMODB_TABLE
+            valueFrom:
+              configMapKeyRef:
+                name: cloudmart-config
+                key: DYNAMODB_TABLE_NAME
         resources:
           requests:
             cpu: 100m
