@@ -74,7 +74,7 @@ jobs:
       - name: Build Docker Image for User Service
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: cloudmart-user-service
+          ECR_REPOSITORY: cloudmart/user-service
           IMAGE_TAG: ${{ github.sha }}
         working-directory: ./services/user-service
         run: |
