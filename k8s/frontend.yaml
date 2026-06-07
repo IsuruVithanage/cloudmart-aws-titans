@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: <YOUR-REGISTRY>/frontend:latest
+        image: 854215217603.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/frontend:latest
         ports:
         - containerPort: 80
         resources:
@@ -57,26 +57,3 @@ spec:
   - port: 80
     targetPort: 80
   type: ClusterIP
----
-# TODO: Add Ingress resource with your cloud provider's load balancer controller
-# Example for AWS ALB:
-# apiVersion: networking.k8s.io/v1
-# kind: Ingress
-# metadata:
-#   name: cloudmart-ingress
-#   namespace: cloudmart-prod
-#   annotations:
-#     kubernetes.io/ingress.class: alb
-#     alb.ingress.kubernetes.io/scheme: internet-facing
-#     alb.ingress.kubernetes.io/target-type: ip
-# spec:
-#   rules:
-#   - http:
-#       paths:
-#       - path: /
-#         pathType: Prefix
-#         backend:
-#           service:
-#             name: frontend
-#             port:
-#               number: 80

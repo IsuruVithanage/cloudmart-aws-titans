@@ -20,6 +20,7 @@ spec:
       labels:
         app: notification-service
     spec:
+      serviceAccountName: notification-service-sa
       containers:
         - name: notification-service
           image: 854215217603.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/notification-service:latest
