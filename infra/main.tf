@@ -40,4 +40,5 @@ database_sg_id   = module.networking.database_sg_id
 db_password      = var.db_password
 team             = var.team
 tags             = local.tags
+  ses_email      = var.ses_email
 }

@@ -19,3 +19,7 @@ variable "tags" {
   type = map(string)
 }
 
+variable "ses_email" {
+  description = "Verified SES sender email address"
+  type        = string
+}

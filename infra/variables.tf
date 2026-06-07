@@ -33,3 +33,8 @@ description = "RDS master password"
 type        = string
 sensitive   = true
 }
+
+variable "ses_email" {
+  description = "SES verified sender email"
+  type        = string
+}

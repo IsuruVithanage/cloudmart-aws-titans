@@ -92,3 +92,25 @@ type = "S"
 tags = var.tags
 }
 
+# ==================== SECRETS MANAGER — user-service DB password ====================
+resource "aws_secretsmanager_secret" "db_password" {
+  name        = "cloudmart/user-service/db-password"
+  description = "RDS PostgreSQL password for user-service"
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id = aws_secretsmanager_secret.db_password.id
+  secret_string = jsonencode({
+    DB_PASSWORD = var.db_password
+    DB_HOST     = aws_db_instance.postgres.endpoint
+    DB_NAME     = "cloudmart"
+    DB_USER     = "cloudmart_admin"
+  })
+}
+
+# ==================== SES — notification-service ====================
+resource "aws_ses_email_identity" "sender" {
+  email = var.ses_email
+}
