@@ -6,64 +6,78 @@ metadata:
   labels:
     app: notification-service
 spec:
-  replicas: 1    # Single replica is fine — it's a queue consumer
+  replicas: 1
   selector:
     matchLabels:
       app: notification-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: notification-service
     spec:
-      # TODO: Add serviceAccountName for workload identity
-      # serviceAccountName: notification-service-sa
+      serviceAccountName: notification-service-sa
       containers:
-      - name: notification-service
-        image: <YOUR-REGISTRY>/notification-service:latest
-        ports:
-        - containerPort: 8004
-        env:
-        - name: PORT
-          value: "8004"
-        - name: ORDER_SERVICE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: cloudmart-config
-              key: ORDER_SERVICE_URL
-        - name: QUEUE_BACKEND
-          valueFrom:
-            configMapKeyRef:
-              name: cloudmart-config
-              key: NOTIFICATION_QUEUE_BACKEND
-        - name: EMAIL_BACKEND
-          valueFrom:
-            configMapKeyRef:
-              name: cloudmart-config
-              key: NOTIFICATION_EMAIL_BACKEND
-        - name: POLL_INTERVAL_MS
-          valueFrom:
-            configMapKeyRef:
-              name: cloudmart-config
-              key: NOTIFICATION_POLL_INTERVAL
-        resources:
-          requests:
-            cpu: 50m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 128Mi
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8004
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8004
-          initialDelaySeconds: 10
-          periodSeconds: 30
+        - name: notification-service
+          image: 854215217603.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/notification-service:latest
+          ports:
+            - containerPort: 8004
+          env:
+            - name: PORT
+              value: "8004"
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudmart-config
+                  key: AWS_REGION
+            - name: SQS_QUEUE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudmart-config
+                  key: SQS_QUEUE_URL
+            - name: ORDER_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudmart-config
+                  key: ORDER_SERVICE_URL
+            - name: QUEUE_BACKEND
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudmart-config
+                  key: NOTIFICATION_QUEUE_BACKEND
+            - name: EMAIL_BACKEND
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudmart-config
+                  key: NOTIFICATION_EMAIL_BACKEND
+            - name: POLL_INTERVAL_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudmart-config
+                  key: NOTIFICATION_POLL_INTERVAL
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8004
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 10
+            periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
@@ -74,6 +88,6 @@ spec:
   selector:
     app: notification-service
   ports:
-  - port: 8004
-    targetPort: 8004
+    - port: 8004
+      targetPort: 8004
   type: ClusterIP

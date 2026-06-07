@@ -1,0 +1,49 @@
+# ==================== KEDA — Event-Driven Autoscaling ====================
+# Section 3.3 [D] — Scale notification-service based on SQS queue depth
+#
+# Pre-requisite: Install KEDA on the cluster:
+#   helm repo add kedacore https://kedacore.github.io/charts
+#   helm install keda kedacore/keda -n keda-system --create-namespace
+#
+# How it works:
+#   - KEDA polls the SQS queue every 15 seconds
+#   - When ApproximateNumberOfMessages > 5, it scales up notification-service
+#   - When queue is empty for 60s (cooldown), it scales back to minReplicaCount
+#   - Uses IRSA via notification-service-sa for SQS access
+
+---
+# TriggerAuthentication — tells KEDA to use IRSA (pod identity) for AWS auth
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-aws-irsa
+  namespace: cloudmart-prod
+spec:
+  podIdentity:
+    provider: aws-eks
+
+---
+# ScaledObject — scales notification-service based on SQS queue depth
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: notification-service-scaledobject
+  namespace: cloudmart-prod
+  labels:
+    app: notification-service
+spec:
+  scaleTargetRef:
+    name: notification-service
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  pollingInterval: 15           # Check queue depth every 15 seconds
+  cooldownPeriod: 60            # Wait 60s before scaling down
+  triggers:
+  - type: aws-sqs-queue
+    authenticationRef:
+      name: keda-aws-irsa
+    metadata:
+      queueURL: https://sqs.ap-south-1.amazonaws.com/854215217603/cloudmart-orders
+      queueLength: "5"          # Scale when > 5 messages in queue
+      awsRegion: ap-south-1
+      identityOwner: pod        # Use the pod's IRSA role (notification-service-sa)
