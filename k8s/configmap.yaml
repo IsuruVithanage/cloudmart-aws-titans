@@ -7,18 +7,25 @@ metadata:
   name: cloudmart-config
   namespace: cloudmart-prod
 data:
+  # Global Environment Configuration
+  AWS_REGION: "ap-south-1"
+
   # Product Service
-  PRODUCT_STORE_BACKEND: "memory"   # Change to dynamodb|firestore|cosmosdb
+  PRODUCT_STORE_BACKEND: "dynamodb"
+  DYNAMODB_TABLE_NAME: "cloudmart-products"
 
   # Order Service
   PRODUCT_SERVICE_URL: "http://product-service:8001"
-  ORDER_QUEUE_BACKEND: "memory"     # Change to sqs|pubsub|servicebus
+  ORDER_QUEUE_BACKEND: "sqs"
+  SQS_QUEUE_URL: "https://sqs.ap-south-1.amazonaws.com/854215217603/cloudmart-orders"
 
   # Notification Service
   ORDER_SERVICE_URL: "http://order-service:8002"
-  NOTIFICATION_QUEUE_BACKEND: "memory"
+  NOTIFICATION_QUEUE_BACKEND: "sqs"
   NOTIFICATION_EMAIL_BACKEND: "console"
   NOTIFICATION_POLL_INTERVAL: "5000"
 
   # User Service
-  USER_DB_BACKEND: "memory"         # Change to postgres
+  USER_DB_BACKEND: "postgres"
+  DB_HOST: "cloudmart-postgres.cvuwmymouqxp.ap-south-1.rds.amazonaws.com"
+  DB_PORT: "5432"
