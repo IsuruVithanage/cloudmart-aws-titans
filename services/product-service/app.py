@@ -26,9 +26,7 @@ from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
 
-# AWS X-Ray distributed tracing
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
+
 
 sampling_rules = {
     "version": 2,
