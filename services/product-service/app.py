@@ -24,7 +24,33 @@ app.config["JSON_SORT_KEYS"] = False
 from aws_xray_sdk.core import xray_recorder
 from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 
-xray_recorder.configure(service='product-service', daemon_address='127.0.0.1:2000')
+sampling_rules = {
+    "version": 2,
+    "rules": [
+        {
+            "description": "Ignore K8s health checks",
+            "host": "*",
+            "http_method": "GET",
+            "url_path": "/health",
+            "fixed_target": 0,
+            "rate": 0.0
+        },
+        {
+            "description": "Ignore K8s readiness checks",
+            "host": "*",
+            "http_method": "GET",
+            "url_path": "/ready",
+            "fixed_target": 0,
+            "rate": 0.0
+        }
+    ],
+    "default": {
+        "fixed_target": 1,
+        "rate": 0.05
+    }
+}
+
+xray_recorder.configure(service='product-service', daemon_address='127.0.0.1:2000', sampling_rules=sampling_rules)
 XRayMiddleware(app, xray_recorder)
 
 logging.basicConfig(

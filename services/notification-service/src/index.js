@@ -202,8 +202,22 @@ async function pollCloudQueue() {
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
 
 function startPolling() {
-  console.log(`[Notification] Starting queue polling (every ${POLL_INTERVAL_MS}ms)`);
-  setInterval(pollCloudQueue, POLL_INTERVAL_MS);
+  console.log(`[Notification] Starting queue polling with backoff`);
+
+  async function loop() {
+    try {
+      // NOTE: Ensure your AWS SQS command in pollCloudQueue includes:
+      // WaitTimeSeconds: 20  <-- This turns on Long Polling (Saves API calls)
+      await pollCloudQueue();
+    } catch (err) {
+      console.error("Polling error:", err);
+    } finally {
+      // Waits for the current poll to finish before starting the 5s timer
+      setTimeout(loop, POLL_INTERVAL_MS);
+    }
+  }
+
+  loop();
 }
 
 // ---------------------------------------------------------------------------

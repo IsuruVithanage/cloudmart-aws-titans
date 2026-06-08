@@ -18,12 +18,12 @@ authentication_mode             = "API_AND_CONFIG_MAP"
 # ==================== Observability ====================
 # Deploys CloudWatch Agent (Container Insights metrics) + Fluent Bit (log shipping)
 # Also includes X-Ray daemon for distributed tracing [D]
-cluster_addons = {
+/*cluster_addons = {
   amazon-cloudwatch-observability = {
     most_recent = true
   }
 }
-
+*/
 access_entries = {
 isuru_admin = {
 principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/isuru"

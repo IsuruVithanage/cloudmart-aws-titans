@@ -42,7 +42,7 @@ const PRODUCT_SERVICE_URL =
 app.use(cors());
 app.use(express.json());
 app.use(morgan('combined'));
-app.use(xrayExpress.openSegment('order-service'));  // X-Ray tracing start
+//app.use(xrayExpress.openSegment('order-service'));  // X-Ray tracing start
 
 // ---------------------------------------------------------------------------
 // In-memory data store
@@ -157,6 +157,8 @@ app.get('/ready', async (req, res) => {
     res.json({ status: 'ready', service: 'order-service', note: 'product-service unreachable but order-service is running' });
   }
 });
+
+app.use(xrayExpress.openSegment('order-service'));
 
 // List all orders (optionally filter by userId)
 app.get('/orders', (req, res) => {
