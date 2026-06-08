@@ -11,16 +11,14 @@ Data Store:
 import os
 import uuid
 import logging
-from datetime import datetime, timedelta
-from functools import wraps
-
-from flask import Flask, jsonify, request, abort
 import bcrypt
-import jwt as pyjwt
-
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
+from datetime import datetime, timedelta
+from functools import wraps
+from flask import Flask, jsonify, request, abort
+import jwt as pyjwt
 
 # ---------------------------------------------------------------------------
 # App setup
