@@ -17,6 +17,8 @@ from flask import Flask, jsonify, request, abort
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
 from decimal import Decimal
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -25,9 +27,6 @@ app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
 
 # AWS X-Ray distributed tracing
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
-
 xray_recorder.configure(service='product-service', daemon_address='127.0.0.1:2000')
 XRayMiddleware(app, xray_recorder)
 
