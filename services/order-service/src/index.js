@@ -13,11 +13,21 @@
  *              (requires workload identity / credentials)
  */
 
+// AWS X-Ray distributed tracing — Section 3.6 [D]
+// MUST be imported before all other modules so X-Ray can auto-instrument HTTP calls
+const AWSXRay = require('aws-xray-sdk-core');
+const xrayExpress = require('aws-xray-sdk-express');
+AWSXRay.setDaemonAddress('127.0.0.1:2000');
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
+
+// CloudWatch custom metrics
+const { CloudWatchClient, PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
+const cwClient = new CloudWatchClient({ region: process.env.AWS_REGION || 'ap-south-1' });
 
 const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
 const sqsClient = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -35,6 +45,7 @@ const PRODUCT_SERVICE_URL =
 app.use(cors());
 app.use(express.json());
 app.use(morgan('combined'));
+app.use(xrayExpress.openSegment('order-service'));  // X-Ray tracing start
 
 // ---------------------------------------------------------------------------
 // In-memory data store
@@ -106,6 +117,32 @@ async function publishOrderEvent(event) {
     // In-memory — just log it
     console.log(`[EventLog] ${event.type}: order ${event.orderId}`);
     eventLog.push(event);
+  }
+}
+
+/**
+ * Publishes a custom CloudWatch metric each time an order is created.
+ * Metric: CloudMart/Orders → OrdersCreated (Count)
+ * Section 3.6 [R] — Custom application metric: orders per minute
+ */
+async function publishOrderMetric() {
+  try {
+    await cwClient.send(new PutMetricDataCommand({
+      Namespace: 'CloudMart/Orders',
+      MetricData: [{
+        MetricName: 'OrdersCreated',
+        Value: 1,
+        Unit: 'Count',
+        Timestamp: new Date(),
+        Dimensions: [
+          { Name: 'Service', Value: 'order-service' },
+          { Name: 'Environment', Value: 'prod' },
+        ],
+      }],
+    }));
+    console.log('[CloudWatch] Published OrdersCreated metric');
+  } catch (err) {
+    console.error('[CloudWatch] Failed to publish metric:', err.message);
   }
 }
 
@@ -242,6 +279,9 @@ app.post('/orders', async (req, res) => {
       timestamp: order.createdAt,
     });
 
+    // Publish custom CloudWatch metric
+    await publishOrderMetric();
+
     console.log(`[Order] Created: ${order.id} — $${order.total} — ${order.items.length} items`);
     res.status(201).json(order);
   } catch (err) {
@@ -287,6 +327,9 @@ app.patch('/orders/:orderId/status', async (req, res) => {
 app.get('/events', (req, res) => {
   res.json({ events: eventLog, count: eventLog.length });
 });
+
+// X-Ray tracing end — must be before error handler
+app.use(xrayExpress.closeSegment());
 
 // ---------------------------------------------------------------------------
 // Error handling

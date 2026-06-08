@@ -1,0 +1,314 @@
+# ==================== Network Policies — cloudmart-prod ====================
+# Section 3.4 [M] — Default-deny + explicit allow for each communication path
+#
+# Traffic flow summary:
+#   ALB (internet) ──► frontend:80
+#   frontend ──► product-service:8001, order-service:8002, user-service:8003
+#   order-service ──► product-service:8001 (internal), SQS:443 (external)
+#   product-service ──► DynamoDB:443 (external)
+#   user-service ──► RDS:5432 (10.0.21.0/24, 10.0.22.0/24), Secrets Manager:443
+#   notification-service ──► SQS:443 + SES:443 (external, no inbound HTTP)
+#   All pods ──► kube-dns:53 (kube-system)
+
+---
+# ============================================================
+# Policy 1: DEFAULT DENY ALL
+# Blocks all ingress and egress for every pod in the namespace.
+# Every legitimate path must be explicitly allowed below.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: cloudmart-prod
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+---
+# ============================================================
+# Policy 2: ALLOW DNS
+# All pods need DNS resolution via kube-dns in kube-system.
+# Without this, no service discovery works.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: cloudmart-prod
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+---
+# ============================================================
+# Policy 3: FRONTEND — Allow ingress from ALB
+# The ALB forwards internet traffic to frontend pods on port 80.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-from-alb
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+  - Ingress
+  ingress:
+  - from: []          # Allow from any source (ALB has dynamic IPs)
+    ports:
+    - protocol: TCP
+      port: 80
+
+---
+# ============================================================
+# Policy 4: FRONTEND — Allow egress to backend services
+# Frontend proxies API requests to product, order, and user services.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-egress
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: product-service
+    ports:
+    - protocol: TCP
+      port: 8001
+  - to:
+    - podSelector:
+        matchLabels:
+          app: order-service
+    ports:
+    - protocol: TCP
+      port: 8002
+  - to:
+    - podSelector:
+        matchLabels:
+          app: user-service
+    ports:
+    - protocol: TCP
+      port: 8003
+
+---
+# ============================================================
+# Policy 5: PRODUCT-SERVICE — Allow ingress from frontend + order-service
+# Both frontend and order-service call product-service on port 8001.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-product-service-ingress
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: product-service
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    - podSelector:
+        matchLabels:
+          app: order-service
+    ports:
+    - protocol: TCP
+      port: 8001
+
+---
+# ============================================================
+# Policy 6: PRODUCT-SERVICE — Allow egress to DynamoDB (HTTPS)
+# DynamoDB API is accessed over HTTPS (port 443) via AWS endpoints.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-product-service-egress
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: product-service
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# ============================================================
+# Policy 7: ORDER-SERVICE — Allow ingress from frontend
+# Only the frontend calls order-service on port 8002.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-order-service-ingress
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: order-service
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - protocol: TCP
+      port: 8002
+
+---
+# ============================================================
+# Policy 8: ORDER-SERVICE — Allow egress to product-service + SQS
+# Calls product-service internally (8001) and SQS via HTTPS (443).
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-order-service-egress
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: order-service
+  policyTypes:
+  - Egress
+  egress:
+  # Internal: order-service → product-service
+  - to:
+    - podSelector:
+        matchLabels:
+          app: product-service
+    ports:
+    - protocol: TCP
+      port: 8001
+  # External: order-service → SQS (AWS API over HTTPS)
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# ============================================================
+# Policy 9: USER-SERVICE — Allow ingress from frontend
+# Only the frontend calls user-service on port 8003.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-user-service-ingress
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: user-service
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - protocol: TCP
+      port: 8003
+
+---
+# ============================================================
+# Policy 10: USER-SERVICE — Allow egress to RDS + Secrets Manager
+# RDS PostgreSQL on port 5432 in database subnets (10.0.21.0/24, 10.0.22.0/24).
+# Secrets Manager via HTTPS (port 443) for credential retrieval.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-user-service-egress
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: user-service
+  policyTypes:
+  - Egress
+  egress:
+  # RDS PostgreSQL in database subnets
+  - to:
+    - ipBlock:
+        cidr: 10.0.21.0/24
+    - ipBlock:
+        cidr: 10.0.22.0/24
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Secrets Manager via HTTPS
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# ============================================================
+# Policy 11: NOTIFICATION-SERVICE — Allow egress to SQS + SES
+# Polls SQS for order events and sends emails via SES.
+# Both are AWS APIs accessed over HTTPS (port 443).
+# No inbound HTTP traffic — notification-service has no ingress rules.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-notification-service-egress
+  namespace: cloudmart-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: notification-service
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443
