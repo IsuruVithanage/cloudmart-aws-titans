@@ -216,7 +216,7 @@ class DynamoDBStore:
                 results = [p for p in results if p.get('category') == category]
             if search:
                 q = search.lower()
-                results = [p for p in results if q in p.get('name', '').lower() or q in p.get('description', '').lower()]
+                results = [p for p in results if any(q in p.get(k, '').lower() for k in ('name', 'description'))]
 
             return self._replace_decimals(results)
         except ClientError as e:
