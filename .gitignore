@@ -29,6 +29,7 @@ image.tar
 **/npm-debug.log*
 **/yarn-debug.log*
 **/yarn-error.log*
+/**/package-lock.json
 
 # Environment files (single entry, no duplicates)
 **/.env

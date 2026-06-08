@@ -11,8 +11,14 @@ Data Store:
 import os
 import uuid
 import logging
+import boto3
 from datetime import datetime
 from flask import Flask, jsonify, request, abort
+from boto3.dynamodb.conditions import Attr
+from botocore.exceptions import ClientError
+from decimal import Decimal
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -199,20 +205,152 @@ class InMemoryStore:
 class DynamoDBStore:
     """
     AWS DynamoDB adapter.
-
-    To use: set STORE_BACKEND=dynamodb and DYNAMODB_TABLE=<table-name>
-
-    Students: implement each method using boto3.
-    Requires IRSA / workload identity for credentials.
+    Requires STORE_BACKEND=dynamodb and DYNAMODB_TABLE=<table-name>
     """
 
     def __init__(self):
-        # TODO: import boto3; create dynamodb resource
-        # self.table = boto3.resource('dynamodb').Table(os.environ['DYNAMODB_TABLE'])
-        raise NotImplementedError(
-            "DynamoDB store not implemented yet. "
-            "See the assignment brief Section 3.3 for guidance."
-        )
+        table_name = os.environ.get('DYNAMODB_TABLE')
+        if not table_name:
+            raise ValueError("DYNAMODB_TABLE environment variable must be set when using dynamodb backend")
+
+        # Uses standard boto3 credential chain (IRSA / Workload Identity)
+        self.dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('AWS_REGION', 'us-east-1'))
+        self.table = self.dynamodb.Table(table_name)
+        logging.getLogger("product-service").info(f"Initialized DynamoDBStore connected to table: {table_name}")
+
+    def _replace_decimals(self, obj):
+        """
+        convert DynamoDB Decimals back to standard Python types for JSON serialization
+        """
+        if isinstance(obj, list):
+            return [self._replace_decimals(i) for i in obj]
+        elif isinstance(obj, dict):
+            return {k: self._replace_decimals(v) for k, v in obj.items()}
+        elif isinstance(obj, Decimal):
+            return float(obj) if obj % 1 else int(obj)
+        return obj
+
+    def get_all(self, category=None, search=None):
+        try:
+            response = self.table.scan()
+            results = response.get('Items', [])
+
+            # Handle pagination if the table gets larger
+            while 'LastEvaluatedKey' in response:
+                response = self.table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+                results.extend(response.get('Items', []))
+
+            # Apply filters locally
+            if category:
+                results = [p for p in results if p.get('category') == category]
+            if search:
+                q = search.lower()
+                results = [p for p in results if q in p.get('name', '').lower() or q in p.get('description', '').lower()]
+
+            return self._replace_decimals(results)
+        except ClientError as e:
+            logging.error(f"DynamoDB get_all error: {e}")
+            return []
+
+    def get_by_id(self, product_id):
+        try:
+            response = self.table.get_item(Key={'id': product_id})
+            item = response.get('Item')
+            return self._replace_decimals(item) if item else None
+        except ClientError as e:
+            logging.error(f"DynamoDB get_by_id error: {e}")
+            return None
+
+    def create(self, data):
+        product_id = f"prod-{uuid.uuid4().hex[:6]}"
+        product = {
+            "id": product_id,
+            "name": data["name"],
+            "description": data.get("description", ""),
+            # Convert float to Decimal for DynamoDB compatibility
+            "price": Decimal(str(data["price"])),
+            "category": data.get("category", "general"),
+            "stock": int(data.get("stock", 0)),
+            "imageUrl": data.get("imageUrl", ""),
+            "createdAt": datetime.utcnow().isoformat() + "Z",
+        }
+
+        try:
+            self.table.put_item(Item=product)
+            return self._replace_decimals(product)
+        except ClientError as e:
+            logging.error(f"DynamoDB create error: {e}")
+            raise Exception("Failed to create product in database")
+
+    def update(self, product_id, data):
+        # check if it exists
+        existing = self.get_by_id(product_id)
+        if not existing:
+            return None
+
+        update_expression = "SET updatedAt = :updatedAt"
+        expression_values = {":updatedAt": datetime.utcnow().isoformat() + "Z"}
+        expression_attribute_names = {}
+
+        # Dynamically build the update expression based on provided fields
+        for key in ["name", "description", "price", "category", "stock", "imageUrl"]:
+            if key in data:
+                # Handle reserved keywords in DynamoDB (like 'name') by using ExpressionAttributeNames
+                attr_name = f"#{key}"
+                expression_attribute_names[attr_name] = key
+                update_expression += f", {attr_name} = :{key}"
+
+                # Handle Decimal conversion for price
+                val = Decimal(str(data[key])) if key == "price" else data[key]
+                expression_values[f":{key}"] = val
+
+        try:
+            response = self.table.update_item(
+                Key={'id': product_id},
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expression_values,
+                ExpressionAttributeNames=expression_attribute_names if expression_attribute_names else None,
+                ReturnValues="ALL_NEW"
+            )
+            return self._replace_decimals(response.get('Attributes'))
+        except ClientError as e:
+            logging.error(f"DynamoDB update error: {e}")
+            raise Exception(f"Failed to update product {product_id}")
+
+    def delete(self, product_id):
+        try:
+            # ReturnValues="ALL_OLD" lets us know if the item actually existed before deletion
+            response = self.table.delete_item(
+                Key={'id': product_id},
+                ReturnValues="ALL_OLD"
+            )
+            return 'Attributes' in response
+        except ClientError as e:
+            logging.error(f"DynamoDB delete error: {e}")
+            return False
+
+    def check_stock(self, product_id, quantity):
+        product = self.get_by_id(product_id)
+        if not product:
+            return False
+        return product.get("stock", 0) >= quantity
+
+    def decrement_stock(self, product_id, quantity):
+        try:
+            # Uses a ConditionExpression to ensure stock doesn't drop below 0 due to concurrent orders
+            self.table.update_item(
+                Key={'id': product_id},
+                UpdateExpression="SET stock = stock - :q",
+                ConditionExpression=Attr('stock').gte(quantity),
+                ExpressionAttributeValues={':q': int(quantity)}
+            )
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logging.warning(f"Insufficient stock for {product_id} during decrement")
+                return False
+            logging.error(f"DynamoDB decrement_stock error: {e}")
+            return False
 
 
 class FirestoreStore:

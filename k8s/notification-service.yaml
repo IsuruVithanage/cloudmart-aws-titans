@@ -54,6 +54,11 @@ spec:
                 configMapKeyRef:
                   name: cloudmart-config
                   key: NOTIFICATION_EMAIL_BACKEND
+            - name: FROM_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudmart-config
+                  key: FROM_EMAIL
             - name: POLL_INTERVAL_MS
               valueFrom:
                 configMapKeyRef:
