@@ -15,6 +15,15 @@ cluster_endpoint_public_access  = true
 cluster_endpoint_private_access = true
 authentication_mode             = "API_AND_CONFIG_MAP"
 
+# ==================== Observability ====================
+# Deploys CloudWatch Agent (Container Insights metrics) + Fluent Bit (log shipping)
+# Also includes X-Ray daemon for distributed tracing [D]
+cluster_addons = {
+  amazon-cloudwatch-observability = {
+    most_recent = true
+  }
+}
+
 access_entries = {
 isuru_admin = {
 principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/isuru"
@@ -36,8 +45,15 @@ desired_size   = 2
 instance_types = ["t3.small"]
 ami_type       = "AL2023_x86_64_STANDARD"
 capacity_type  = "ON_DEMAND"
+
+  # IAM policies for observability — Section 3.6 [M] + [D]
+  iam_role_additional_policies = {
+    CloudWatchAgent = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+    XRay            = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+  }
 }
 }
 
 tags = var.tags
 }
+
