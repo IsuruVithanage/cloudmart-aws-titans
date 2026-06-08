@@ -1,5 +1,6 @@
 flask==3.0.3
 gunicorn==22.0.0
+aws-xray-sdk==2.13.0
 # Uncomment the adapter you need for your cloud provider:
 # boto3==1.34.0              # AWS DynamoDB
 # google-cloud-firestore==2.16.0  # GCP Firestore
