@@ -22,8 +22,9 @@ data:
   # Notification Service
   ORDER_SERVICE_URL: "http://order-service:8002"
   NOTIFICATION_QUEUE_BACKEND: "sqs"
-  NOTIFICATION_EMAIL_BACKEND: "console"
+  NOTIFICATION_EMAIL_BACKEND: "ses"
   NOTIFICATION_POLL_INTERVAL: "5000"
+  FROM_EMAIL: "isuruvithanagemv@gmail.com"
 
   # User Service
   USER_DB_BACKEND: "postgres"
@@ -52,8 +53,9 @@ data:
   # Notification Service
   ORDER_SERVICE_URL: "http://order-service:8002"
   NOTIFICATION_QUEUE_BACKEND: "sqs"
-  NOTIFICATION_EMAIL_BACKEND: "console"
+  NOTIFICATION_EMAIL_BACKEND: "ses"
   NOTIFICATION_POLL_INTERVAL: "5000"
+  FROM_EMAIL: "isuruvithanagemv@gmail.com"
 
   # User Service
   USER_DB_BACKEND: "postgres"
