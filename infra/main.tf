@@ -42,3 +42,14 @@ team             = var.team
 tags             = local.tags
   ses_email      = var.ses_email
 }
+
+# ==================== OBSERVABILITY ====================
+module "observability" {
+  source          = "./modules/observability"
+  cluster_name    = var.cluster_name
+  region          = var.region
+  rds_instance_id = "cloudmart-postgres"
+  sqs_queue_name  = "cloudmart-orders"
+  alarm_email     = var.owner_email
+  tags            = local.tags
+}
