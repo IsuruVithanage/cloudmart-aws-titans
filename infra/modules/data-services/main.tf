@@ -18,7 +18,8 @@ vpc_security_group_ids  = [var.database_sg_id]
 skip_final_snapshot     = true
 deletion_protection     = false
 storage_encrypted       = true
-backup_retention_period = 0   # Free tier restriction; set to 7 in production
+backup_retention_period = 7
+backup_window           = "02:00-03:00"
 tags                    = var.tags
 }
 
