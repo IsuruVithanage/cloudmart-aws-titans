@@ -38,3 +38,9 @@ variable "ses_email" {
   description = "SES verified sender email"
   type        = string
 }
+
+variable "Project" {
+  description = "Project name for tagging"
+  type        = string
+  default     = "cloudmart"
+}
