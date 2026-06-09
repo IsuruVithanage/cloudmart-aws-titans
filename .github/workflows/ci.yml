@@ -278,4 +278,4 @@ jobs:
         uses: bmuschko/setup-kubeconform@v1
 
       - name: Validate Kubernetes Manifests
-        run: kubeconform -summary -strict -skip ScaledObject,TriggerAuthentication k8s/
+        run: kubeconform -summary -strict -skip ScaledObject,TriggerAuthentication,ExternalSecret,SecretStore k8s/

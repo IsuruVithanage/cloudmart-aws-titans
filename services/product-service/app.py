@@ -26,10 +26,6 @@ from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
 
-# AWS X-Ray distributed tracing
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
-
 sampling_rules = {
     "version": 2,
     "rules": [
@@ -245,7 +241,7 @@ class DynamoDBStore:
                 results = [p for p in results if p.get('category') == category]
             if search:
                 q = search.lower()
-                results = [p for p in results if q in p.get('name', '').lower() or q in p.get('description', '').lower()]
+                results = [p for p in results if any(q in p.get(k, '').lower() for k in ('name', 'description'))]
 
             return self._replace_decimals(results)
         except ClientError as e:

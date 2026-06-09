@@ -11,16 +11,14 @@ Data Store:
 import os
 import uuid
 import logging
-from datetime import datetime, timedelta
-from functools import wraps
-
-from flask import Flask, jsonify, request, abort
 import bcrypt
-import jwt as pyjwt
-
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
+from datetime import datetime, timedelta
+from functools import wraps
+from flask import Flask, jsonify, request, abort
+import jwt as pyjwt
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -129,7 +127,10 @@ class PostgresUserStore:
         self.password = os.environ.get("DB_PASSWORD")
 
         if not all([self.host, self.database, self.user, self.password]):
-            raise ValueError("Missing required PostgreSQL environment variables (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD).")
+            raise ValueError(
+                "Missing required PostgreSQL environment variables "
+                "(DB_HOST, DB_NAME, DB_USER, DB_PASSWORD)."
+            )
 
         try:
             # Initialize a connection pool (Min: 1 connection, Max: 10 connections)
