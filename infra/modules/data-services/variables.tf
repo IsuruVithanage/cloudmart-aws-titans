@@ -23,3 +23,8 @@ variable "ses_email" {
   description = "Verified SES sender email address"
   type        = string
 }
+
+variable "test_recipient_emails" {
+  description = "List of test recipient emails for SES sandbox"
+  type        = set(string)
+}

@@ -96,6 +96,7 @@ async function processOrderEvent(event) {
   const eventKey = `${event.type}-${event.orderId}-${event.timestamp}`;
   if (processedEvents.has(eventKey)) return;
   processedEvents.add(eventKey);
+  const recipientEmail = event.userEmail;
 
   if (event.type === 'ORDER_CREATED') {
     const itemList = event.items
@@ -118,8 +119,6 @@ async function processOrderEvent(event) {
       `Thank you for shopping with CloudMart!`,
     ].join('\n');
 
-    // In a real system, we'd look up the user's email from user-service
-    const recipientEmail = `${event.userId}@cloudmart.example`;
     await sendEmail(recipientEmail, subject, body);
 
     console.log(
@@ -135,7 +134,6 @@ async function processOrderEvent(event) {
       `Thank you for shopping with CloudMart!`,
     ].join('\n');
 
-    const recipientEmail = `${event.userId}@cloudmart.example`;
     await sendEmail(recipientEmail, subject, body);
 
     console.log(

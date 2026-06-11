@@ -58,6 +58,7 @@ const seedOrders = [
   {
     id: 'ord-001',
     userId: 'user-001',
+    userEmail: 'user001@example.com',
     items: [
       { productId: 'prod-001', name: 'Wireless Bluetooth Headphones', quantity: 1, price: 79.99 },
       { productId: 'prod-003', name: 'USB-C Laptop Stand', quantity: 1, price: 49.99 },
@@ -191,7 +192,7 @@ app.get('/orders/:orderId', (req, res) => {
 // Create a new order
 app.post('/orders', async (req, res) => {
   try {
-    const { userId, items, shippingAddress } = req.body;
+    const { userId, userEmail, items, shippingAddress } = req.body;
 
     if (!userId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -261,6 +262,7 @@ app.post('/orders', async (req, res) => {
     const order = {
       id: `ord-${uuidv4().split('-')[0]}`,
       userId,
+      userEmail,
       items: enrichedItems,
       total: Math.round(total * 100) / 100,
       status: 'pending',
@@ -276,6 +278,7 @@ app.post('/orders', async (req, res) => {
       type: 'ORDER_CREATED',
       orderId: order.id,
       userId: order.userId,
+      userEmail: order.userEmail,
       total: order.total,
       items: order.items,
       timestamp: order.createdAt,
@@ -316,6 +319,7 @@ app.patch('/orders/:orderId/status', async (req, res) => {
     type: 'ORDER_STATUS_CHANGED',
     orderId: order.id,
     userId: order.userId,
+    userEmail: order.userEmail,
     oldStatus: order.status,
     newStatus: status,
     timestamp: order.updatedAt,

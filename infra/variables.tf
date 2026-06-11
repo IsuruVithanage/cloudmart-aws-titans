@@ -39,6 +39,12 @@ variable "ses_email" {
   type        = string
 }
 
+variable "test_recipient_emails" {
+  description = "List of recipient emails to verify in SES Sandbox"
+  type        = set(string)
+  default     = []
+}
+
 variable "Project" {
   description = "Project name for tagging"
   type        = string

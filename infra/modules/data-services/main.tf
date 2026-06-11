@@ -116,3 +116,8 @@ resource "aws_secretsmanager_secret_version" "db_password" {
 resource "aws_ses_email_identity" "sender" {
   email = var.ses_email
 }
+
+resource "aws_ses_email_identity" "test_recipients" {
+  for_each = var.test_recipient_emails
+  email    = each.value
+}

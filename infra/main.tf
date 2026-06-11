@@ -41,6 +41,7 @@ db_password      = var.db_password
 team             = var.team
 tags             = local.tags
   ses_email      = var.ses_email
+  test_recipient_emails = var.test_recipient_emails
 }
 
 # ==================== OBSERVABILITY ====================
