@@ -132,3 +132,46 @@ resource "aws_iam_policy" "notification_service" {
     ]
   })
 }
+
+# 5. IAM Role for AWS Load Balancer Controller
+module "iam_eks_role_alb_controller" {
+  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version   = "~> 5.39"
+  role_name = "AmazonEKSLoadBalancerControllerRole"
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
+    }
+  }
+  role_policy_arns = { policy = "arn:aws:iam::aws:policy/AWSLoadBalancerControllerIAMPolicy" }
+}
+
+# 6. IAM Role for External Secrets Operator
+module "iam_eks_role_external_secrets" {
+  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version   = "~> 5.39"
+  role_name = "cloudmart-external-secrets-role"
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["cloudmart-prod:external-secrets-sa"]
+    }
+  }
+
+  role_policy_arns = { secretsmanager = "arn:aws:iam::aws:policy/SecretsManagerReadWrite" }
+}
+
+# 7. IAM Role for KEDA (for SQS scaling)
+module "iam_eks_role_keda" {
+  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version   = "~> 5.39"
+  role_name = "cloudmart-keda-role"
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["cloudmart-prod:keda-operator"]
+    }
+  }
+  role_policy_arns = { sqs = "arn:aws:iam::aws:policy/AmazonSQSFullAccess" }
+}
