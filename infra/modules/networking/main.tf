@@ -114,7 +114,6 @@ tags = merge(var.tags, { Name = "cloudmart-db-sg" })
 resource "aws_cloudwatch_log_group" "flow_log" {
 name              = "/aws/vpc/cloudmart-flow-logs"
 retention_in_days = 7
-force_destroy     = true
 tags              = var.tags
 }
 

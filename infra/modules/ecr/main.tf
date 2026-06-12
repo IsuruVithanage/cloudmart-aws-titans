@@ -3,7 +3,7 @@ for_each = toset(var.service_names)
 
 name                 = "cloudmart/${each.value}"
 image_tag_mutability = "MUTABLE"
-force_destroy        = true
+force_delete        = true
 
 image_scanning_configuration {
 scan_on_push = true
