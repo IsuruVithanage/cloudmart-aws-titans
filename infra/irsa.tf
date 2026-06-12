@@ -144,7 +144,9 @@ module "iam_eks_role_alb_controller" {
       namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
     }
   }
-  role_policy_arns = { policy = "arn:aws:iam::aws:policy/AWSLoadBalancerControllerIAMPolicy" }
+  role_policy_arns = {
+    AWSLoadBalancerController = "arn:aws:iam::aws:policy/AWSLoadBalancerControllerIAMPolicy"
+  }
 }
 
 # 6. IAM Role for External Secrets Operator
