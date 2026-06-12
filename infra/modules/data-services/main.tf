@@ -47,8 +47,9 @@ tags                      = var.tags
 
 # ==================== S3 — static assets ====================
 resource "aws_s3_bucket" "assets" {
-bucket = "cloudmart-assets-${var.team}"
-tags   = var.tags
+bucket        = "cloudmart-assets-${var.team}"
+force_destroy = true
+tags          = var.tags
 }
 
 resource "aws_s3_bucket_versioning" "assets" {
@@ -60,8 +61,9 @@ status = "Enabled"
 
 # ==================== S3 — Terraform state ====================
 resource "aws_s3_bucket" "terraform_state" {
-bucket = "cloudmart-tf-state-${var.team}"
-tags   = var.tags
+bucket        = "cloudmart-tf-state-${var.team}"
+force_destroy = true
+tags          = var.tags
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
@@ -98,6 +100,7 @@ tags = var.tags
 resource "aws_secretsmanager_secret" "db_password" {
   name        = "cloudmart/user-service/db-password"
   description = "RDS PostgreSQL password for user-service"
+  recovery_window_in_days = 0
 
   tags = var.tags
 }
