@@ -96,7 +96,7 @@ resource "aws_iam_policy" "user_service" {
         {
             Effect = "Allow",
             Action = ["secretsmanager:GetSecretValue"],
-            Resource = module.data_services.secret_arn
+            Resource = "${module.data_services.secret_arn}*"
         }
     ]
   })
