@@ -47,6 +47,8 @@ app.use(express.json());
 app.use(morgan('combined'));
 //app.use(xrayExpress.openSegment('order-service'));  // X-Ray tracing start
 
+const apiRouter = express.Router();
+
 // ---------------------------------------------------------------------------
 // In-memory data store
 // ---------------------------------------------------------------------------
@@ -170,7 +172,7 @@ app.get('/ready', async (req, res) => {
 app.use(xrayExpress.openSegment('order-service'));
 
 // List all orders (optionally filter by userId)
-app.get('/orders', (req, res) => {
+apiRouter.get('/orders', (req, res) => {
   let result = Array.from(orders.values());
   if (req.query.userId) {
     result = result.filter((o) => o.userId === req.query.userId);
@@ -181,7 +183,7 @@ app.get('/orders', (req, res) => {
 });
 
 // Get single order
-app.get('/orders/:orderId', (req, res) => {
+apiRouter.get('/orders/:orderId', (req, res) => {
   const order = orders.get(req.params.orderId);
   if (!order) {
     return res.status(404).json({ error: 'Not Found', message: `Order ${req.params.orderId} not found` });
@@ -190,7 +192,7 @@ app.get('/orders/:orderId', (req, res) => {
 });
 
 // Create a new order
-app.post('/orders', async (req, res) => {
+apiRouter.post('/orders', async (req, res) => {
   try {
     const { userId, userEmail, items, shippingAddress } = req.body;
 
@@ -208,7 +210,7 @@ app.post('/orders', async (req, res) => {
     for (const item of items) {
       try {
         const stockRes = await axios.get(
-          `${PRODUCT_SERVICE_URL}/products/${item.productId}/stock`,
+          `${PRODUCT_SERVICE_URL}/api/products/${item.productId}/stock`,
           { timeout: 3000 }
         );
         if (stockRes.data.stock < (item.quantity || 1)) {
@@ -220,7 +222,7 @@ app.post('/orders', async (req, res) => {
 
         // Get product details
         const productRes = await axios.get(
-          `${PRODUCT_SERVICE_URL}/products/${item.productId}`,
+          `${PRODUCT_SERVICE_URL}/api/products/${item.productId}`,
           { timeout: 3000 }
         );
         const product = productRes.data;
@@ -238,7 +240,7 @@ app.post('/orders', async (req, res) => {
 
         // Decrement stock
         await axios.post(
-          `${PRODUCT_SERVICE_URL}/products/${item.productId}/stock/decrement`,
+          `${PRODUCT_SERVICE_URL}/api/products/${item.productId}/stock/decrement`,
           { quantity },
           { timeout: 3000 }
         );
@@ -296,7 +298,7 @@ app.post('/orders', async (req, res) => {
 });
 
 // Update order status
-app.patch('/orders/:orderId/status', async (req, res) => {
+apiRouter.patch('/orders/:orderId/status', async (req, res) => {
   const order = orders.get(req.params.orderId);
   if (!order) {
     return res.status(404).json({ error: 'Not Found', message: `Order ${req.params.orderId} not found` });
@@ -328,6 +330,8 @@ app.patch('/orders/:orderId/status', async (req, res) => {
   console.log(`[Order] Status updated: ${order.id} → ${status}`);
   res.json(order);
 });
+
+app.use('/api', apiRouter);
 
 // Get event log (for debugging / demo purposes)
 app.get('/events', (req, res) => {
