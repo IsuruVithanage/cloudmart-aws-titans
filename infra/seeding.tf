@@ -2,6 +2,18 @@
 # DynamoDB Seeding Job - Runs once after product-service is ready
 # ============================================================
 
+resource "kubernetes_service_account" "product_service_sa" {
+  metadata {
+    name      = "product-service-sa"
+    namespace = "cloudmart-prod"
+    annotations = {
+      "eks.amazonaws.com/role-arn" = module.iam_eks_role_product.iam_role_arn
+    }
+  }
+
+  depends_on = [module.addons]
+}
+
 resource "kubernetes_job" "dynamodb_seeder" {
   metadata {
     name      = "dynamodb-seeder"
@@ -65,5 +77,8 @@ PYCODE
     backoff_limit = 2
   }
 
-  depends_on = [helm_release.aws_load_balancer_controller]  # Wait for cluster to be ready
+  depends_on = [
+    module.addons,
+    kubernetes_service_account.product_service_sa
+  ]
 }
