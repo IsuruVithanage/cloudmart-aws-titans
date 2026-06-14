@@ -55,12 +55,29 @@ module "observability" {
   tags            = local.tags
 }
 
+# ==================== ADDONS (Helm + Kubernetes Resources) ====================
+module "addons" {
+  source = "./modules/addons"
+
+  cluster_name               = module.eks.cluster_name
+  vpc_id                     = module.networking.vpc_id
+
+  alb_controller_role_arn    = module.iam_eks_role_alb_controller.iam_role_arn
+  external_secrets_role_arn  = module.iam_eks_role_external_secrets.iam_role_arn
+  keda_role_arn              = module.iam_eks_role_keda.iam_role_arn
+  db_secret_arn              = module.data_services.secret_arn
+
+  depends_on = [
+    module.eks,
+    module.iam_eks_role_alb_controller,
+    module.iam_eks_role_external_secrets,
+    module.iam_eks_role_keda
+  ]
+}
+
 # ============================================================
 # ALB → EKS Node Security Group Rules
-# These rules allow the ALB to reach frontend (port 80) and
-# backend services (ports 8001-8003) on the EKS worker nodes.
 # ============================================================
-
 resource "aws_security_group_rule" "alb_to_eks_nodes_http" {
   type                     = "ingress"
   from_port                = 80
