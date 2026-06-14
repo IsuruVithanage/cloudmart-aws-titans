@@ -127,7 +127,13 @@ resource "aws_iam_policy" "notification_service" {
       {
           Effect = "Allow",
           Action = ["ses:SendEmail"],
-          Resource = module.data_services.ses_identity_arn
+          Resource = [
+            for email in toset(concat(
+              [var.ses_email],
+              tolist(var.test_recipient_emails)
+            )) :
+            "arn:aws:ses:${var.region}:${data.aws_caller_identity.current.account_id}:identity/${email}"
+          ]
       }
     ]
   })
