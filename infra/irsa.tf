@@ -133,7 +133,7 @@ resource "aws_iam_policy" "notification_service" {
   })
 }
 
-# 5. IAM Role for AWS Load Balancer Controller
+# 5. IAM Role for AWS Load Balancer Controller (Official Policy)
 module "iam_eks_role_alb_controller" {
   source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version   = "~> 5.39"
@@ -145,8 +145,15 @@ module "iam_eks_role_alb_controller" {
     }
   }
   role_policy_arns = {
-    AWSLoadBalancerController = "arn:aws:iam::aws:policy/AWSLoadBalancerControllerIAMPolicy"
+    alb_controller = aws_iam_policy.alb_controller.arn
   }
+}
+
+# Official policy downloaded from upstream
+resource "aws_iam_policy" "alb_controller" {
+  name        = "AWSLoadBalancerControllerIAMPolicy"
+  description = "IAM policy for AWS Load Balancer Controller (official)"
+  policy = file("${path.module}/policies/aws-load-balancer-controller-policy.json")
 }
 
 # 6. IAM Role for External Secrets Operator
