@@ -40,6 +40,7 @@ capacity_type  = "ON_DEMAND"
   iam_role_additional_policies = {
     CloudWatchAgent = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
     XRay            = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+    EC2ReadOnly     = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
   }
 }
 }
