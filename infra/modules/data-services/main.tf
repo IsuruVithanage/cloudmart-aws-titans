@@ -47,7 +47,7 @@ tags                      = var.tags
 
 # ==================== S3 — static assets ====================
 resource "aws_s3_bucket" "assets" {
-bucket        = "cloudmart-assets-${var.team}"
+bucket        = "${var.team}-cloudmart-assets"
 force_destroy = true
 tags          = var.tags
 }
@@ -61,7 +61,7 @@ status = "Enabled"
 
 # ==================== S3 — Terraform state ====================
 resource "aws_s3_bucket" "terraform_state" {
-bucket        = "cloudmart-tf-state-${var.team}"
+bucket        = "${var.team}-cloudmart-tf-state"
 force_destroy = true
 tags          = var.tags
 }
