@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: 854215217603.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/frontend:latest
+        image: 787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/frontend:latest
         ports:
         - containerPort: 80
         resources:

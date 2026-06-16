@@ -28,10 +28,10 @@ tags                    = var.tags
 resource "aws_dynamodb_table" "products" {
 name         = "cloudmart-products"
 billing_mode = "PAY_PER_REQUEST"
-hash_key     = "productId"
+hash_key     = "id"
 
 attribute {
-name = "productId"
+name = "id"
 type = "S"
 }
 
@@ -47,8 +47,9 @@ tags                      = var.tags
 
 # ==================== S3 — static assets ====================
 resource "aws_s3_bucket" "assets" {
-bucket = "cloudmart-assets-${var.team}"
-tags   = var.tags
+bucket        = "${var.team}-cloudmart-assets"
+force_destroy = true
+tags          = var.tags
 }
 
 resource "aws_s3_bucket_versioning" "assets" {
@@ -60,8 +61,9 @@ status = "Enabled"
 
 # ==================== S3 — Terraform state ====================
 resource "aws_s3_bucket" "terraform_state" {
-bucket = "cloudmart-tf-state-${var.team}"
-tags   = var.tags
+bucket        = "${var.team}-cloudmart-tf-state"
+force_destroy = true
+tags          = var.tags
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
@@ -98,6 +100,7 @@ tags = var.tags
 resource "aws_secretsmanager_secret" "db_password" {
   name        = "cloudmart/user-service/db-password"
   description = "RDS PostgreSQL password for user-service"
+  recovery_window_in_days = 0
 
   tags = var.tags
 }
@@ -115,4 +118,9 @@ resource "aws_secretsmanager_secret_version" "db_password" {
 # ==================== SES — notification-service ====================
 resource "aws_ses_email_identity" "sender" {
   email = var.ses_email
+}
+
+resource "aws_ses_email_identity" "test_recipients" {
+  for_each = var.test_recipient_emails
+  email    = each.value
 }

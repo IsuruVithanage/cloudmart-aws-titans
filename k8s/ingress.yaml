@@ -20,8 +20,8 @@ metadata:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/subnets: subnet-0b03cfd32ba4e70b4,subnet-05cc04c699d5d6105
-    alb.ingress.kubernetes.io/security-groups: sg-05f95bd7803e531ab
+    alb.ingress.kubernetes.io/subnets: subnet-035b7bc32a7709533,subnet-0edefa1062fbe1c9d
+    alb.ingress.kubernetes.io/security-groups: sg-016f8e06a4b5b032e
     alb.ingress.kubernetes.io/healthcheck-path: /health
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     alb.ingress.kubernetes.io/group.name: cloudmart

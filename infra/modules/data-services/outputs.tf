@@ -10,5 +10,5 @@ output "ses_email" {
 }
 
 output "ses_identity_arn" {
-  value = "arn:aws:ses:ap-south-1:854215217603:identity/${aws_ses_email_identity.sender.email}"
+  value = "arn:aws:ses:ap-south-1:787308166325:identity/${aws_ses_email_identity.sender.email}"
 }

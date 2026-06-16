@@ -23,7 +23,7 @@ spec:
       serviceAccountName: product-service-sa
       containers:
       - name: product-service
-        image: 854215217603.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/product-service:latest
+        image: 787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/product-service:latest
         ports:
         - containerPort: 8001
         env:

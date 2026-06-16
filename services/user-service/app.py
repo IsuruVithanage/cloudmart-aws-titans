@@ -17,7 +17,7 @@ from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, Blueprint
 import jwt as pyjwt
 
 # ---------------------------------------------------------------------------
@@ -25,6 +25,7 @@ import jwt as pyjwt
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
+api = Blueprint('api', __name__, url_prefix='/api')
 
 JWT_SECRET = os.environ.get("JWT_SECRET", "cloudmart-dev-secret-change-in-production")
 JWT_EXPIRY_HOURS = int(os.environ.get("JWT_EXPIRY_HOURS", "24"))
@@ -337,7 +338,7 @@ def ready():
     return jsonify({"status": "ready", "service": "user-service"})
 
 
-@app.route("/auth/register", methods=["POST"])
+@api.route("/auth/register", methods=["POST"])
 def register():
     """Register a new user."""
     data = request.get_json()
@@ -380,7 +381,7 @@ def register():
     return jsonify({"user": safe_user(user), "token": token}), 201
 
 
-@app.route("/auth/login", methods=["POST"])
+@api.route("/auth/login", methods=["POST"])
 def login():
     """Authenticate a user and return a JWT token."""
     data = request.get_json()
@@ -407,14 +408,14 @@ def login():
     return jsonify({"user": safe_user(user), "token": token})
 
 
-@app.route("/auth/verify", methods=["GET"])
+@api.route("/auth/verify", methods=["GET"])
 @require_auth
 def verify_token():
     """Verify a JWT token and return the user info."""
     return jsonify({"valid": True, "user": request.user})
 
 
-@app.route("/users/me", methods=["GET"])
+@api.route("/users/me", methods=["GET"])
 @require_auth
 def get_my_profile():
     """Get the current user's profile."""
@@ -424,7 +425,7 @@ def get_my_profile():
     return jsonify(safe_user(user))
 
 
-@app.route("/users/me", methods=["PUT"])
+@api.route("/users/me", methods=["PUT"])
 @require_auth
 def update_my_profile():
     """Update the current user's profile."""
@@ -440,7 +441,7 @@ def update_my_profile():
     return jsonify(safe_user(user))
 
 
-@app.route("/users/<user_id>", methods=["GET"])
+@api.route("/users/<user_id>", methods=["GET"])
 def get_user(user_id):
     """Get a user by ID (public profile info only)."""
     user = user_store.find_by_id(user_id)
@@ -449,6 +450,7 @@ def get_user(user_id):
     # Return limited public info
     return jsonify({"id": user["id"], "name": user["name"], "createdAt": user["createdAt"]})
 
+app.register_blueprint(api)
 
 # ---------------------------------------------------------------------------
 # Error handlers

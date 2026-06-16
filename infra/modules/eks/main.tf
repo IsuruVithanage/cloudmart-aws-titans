@@ -15,6 +15,8 @@ cluster_endpoint_public_access  = true
 cluster_endpoint_private_access = true
 authentication_mode             = "API_AND_CONFIG_MAP"
 
+enable_cluster_creator_admin_permissions = true
+
 # ==================== Observability ====================
 # Deploys CloudWatch Agent (Container Insights metrics) + Fluent Bit (log shipping)
 # Also includes X-Ray daemon for distributed tracing [D]
@@ -24,18 +26,6 @@ authentication_mode             = "API_AND_CONFIG_MAP"
   }
 }
 */
-access_entries = {
-isuru_admin = {
-principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/isuru"
-kubernetes_groups = []
-policy_associations = {
-admin = {
-policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-access_scope = { type = "cluster" }
-}
-}
-}
-}
 
 eks_managed_node_groups = {
 general = {
@@ -50,10 +40,10 @@ capacity_type  = "ON_DEMAND"
   iam_role_additional_policies = {
     CloudWatchAgent = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
     XRay            = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+    EC2ReadOnly     = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
   }
 }
 }
 
 tags = var.tags
 }
-

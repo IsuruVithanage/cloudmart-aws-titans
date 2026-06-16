@@ -13,7 +13,7 @@ import uuid
 import logging
 import boto3
 from datetime import datetime
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, Blueprint
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
 from decimal import Decimal
@@ -25,6 +25,7 @@ from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
+api = Blueprint('api', __name__, url_prefix='/api')
 
 sampling_rules = {
     "version": 2,
@@ -419,7 +420,7 @@ def ready():
         return jsonify({"status": "not ready", "error": str(e)}), 503
 
 
-@app.route("/products", methods=["GET"])
+@api.route("/products", methods=["GET"])
 def list_products():
     """
     List all products.
@@ -431,7 +432,7 @@ def list_products():
     return jsonify({"products": products, "count": len(products)})
 
 
-@app.route("/products/<product_id>", methods=["GET"])
+@api.route("/products/<product_id>", methods=["GET"])
 def get_product(product_id):
     """Get a single product by ID."""
     product = store.get_by_id(product_id)
@@ -440,7 +441,7 @@ def get_product(product_id):
     return jsonify(product)
 
 
-@app.route("/products", methods=["POST"])
+@api.route("/products", methods=["POST"])
 def create_product():
     """Create a new product."""
     data = request.get_json()
@@ -451,7 +452,7 @@ def create_product():
     return jsonify(product), 201
 
 
-@app.route("/products/<product_id>", methods=["PUT"])
+@api.route("/products/<product_id>", methods=["PUT"])
 def update_product(product_id):
     """Update an existing product."""
     data = request.get_json()
@@ -464,7 +465,7 @@ def update_product(product_id):
     return jsonify(product)
 
 
-@app.route("/products/<product_id>", methods=["DELETE"])
+@api.route("/products/<product_id>", methods=["DELETE"])
 def delete_product(product_id):
     """Delete a product."""
     if not store.delete(product_id):
@@ -473,7 +474,7 @@ def delete_product(product_id):
     return jsonify({"message": f"Product {product_id} deleted"}), 200
 
 
-@app.route("/products/<product_id>/stock", methods=["GET"])
+@api.route("/products/<product_id>/stock", methods=["GET"])
 def check_stock(product_id):
     """Check stock availability (called by order-service)."""
     product = store.get_by_id(product_id)
@@ -484,7 +485,7 @@ def check_stock(product_id):
     )
 
 
-@app.route("/products/<product_id>/stock/decrement", methods=["POST"])
+@api.route("/products/<product_id>/stock/decrement", methods=["POST"])
 def decrement_stock(product_id):
     """Decrement stock after order placement (called by order-service)."""
     data = request.get_json() or {}
@@ -495,13 +496,14 @@ def decrement_stock(product_id):
     return jsonify({"message": "Stock updated", "productId": product_id})
 
 
-@app.route("/categories", methods=["GET"])
+@api.route("/categories", methods=["GET"])
 def list_categories():
     """List all unique product categories."""
     products = store.get_all()
     categories = sorted(set(p["category"] for p in products))
     return jsonify({"categories": categories})
 
+app.register_blueprint(api)
 
 # ---------------------------------------------------------------------------
 # Error handlers
