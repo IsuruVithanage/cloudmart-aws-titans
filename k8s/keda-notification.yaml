@@ -43,7 +43,7 @@ spec:
     authenticationRef:
       name: keda-aws-irsa
     metadata:
-      queueURL: https://sqs.ap-south-1.amazonaws.com/854215217603/cloudmart-orders
+      queueURL: https://sqs.ap-south-1.amazonaws.com/787308166325/cloudmart-orders
       queueLength: "5"          # Scale when > 5 messages in queue
       awsRegion: ap-south-1
       identityOwner: pod        # Use the pod's IRSA role (notification-service-sa)
