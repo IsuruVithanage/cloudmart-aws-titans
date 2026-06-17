@@ -266,7 +266,7 @@ jobs:
         run: docker push ${{ env.FULL_IMAGE_NAME }}
 
   # ==========================================
-  # 4. KUBERNETES MANIFEST VALIDATION
+  # 4. KUBERNETES & HELM VALIDATION
   # ==========================================
   validate-manifests:
     runs-on: ubuntu-latest
@@ -274,8 +274,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Validate the remaining static cluster-wide files
       - name: Setup Kubeconform
         uses: bmuschko/setup-kubeconform@v1
 
-      - name: Validate Kubernetes Manifests
+      - name: Validate static K8s Manifests
         run: kubeconform -summary -strict -skip ScaledObject,TriggerAuthentication,ExternalSecret,SecretStore k8s/
+
+      # NEW: Validate your new Helm Chart syntax
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint Helm Chart
+        run: |
+          helm lint ./helm/cloudmart-service

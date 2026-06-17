@@ -1,0 +1,27 @@
+serviceName: "frontend"
+namespace: "cloudmart-prod"
+replicaCount: 2
+
+image:
+  repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/frontend"
+  tag: "latest"
+
+service:
+  type: "ClusterIP"
+  port: 80
+  targetPort: 80
+
+probes:
+  readinessPath: "/health"
+  livenessPath: "/health"
+
+autoscaling:
+  enabled: false
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "64Mi"
+  limits:
+    cpu: "200m"
+    memory: "128Mi"
