@@ -1,0 +1,41 @@
+serviceName: "product-service"
+namespace: "cloudmart-prod"
+replicaCount: 2
+serviceAccountName: "product-service-sa"
+
+image:
+  repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/product-service"
+  tag: "latest"
+
+service:
+  type: "ClusterIP"
+  port: 8001
+  targetPort: 8001
+
+probes:
+  readinessPath: "/ready"
+  livenessPath: "/health"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 60
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+
+env:
+  - name: PORT
+    value: "8001"
+  - name: STORE_BACKEND
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: PRODUCT_STORE_BACKEND }
+  - name: DYNAMODB_TABLE
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: DYNAMODB_TABLE_NAME }

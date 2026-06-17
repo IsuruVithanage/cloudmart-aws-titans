@@ -1,0 +1,53 @@
+serviceName: "notification-service"
+namespace: "cloudmart-prod"
+replicaCount: 1
+serviceAccountName: "notification-service-sa"
+
+image:
+  repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/notification-service"
+  tag: "latest"
+
+service:
+  type: "ClusterIP"
+  port: 8004
+  targetPort: 8004
+
+probes:
+  readinessPath: "/ready"
+  livenessPath: "/health"
+
+autoscaling:
+  enabled: false
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "64Mi"
+  limits:
+    cpu: "200m"
+    memory: "128Mi"
+
+env:
+  - name: PORT
+    value: "8004"
+  - name: AWS_REGION
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: AWS_REGION }
+  - name: SQS_QUEUE_URL
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: SQS_QUEUE_URL }
+  - name: ORDER_SERVICE_URL
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: ORDER_SERVICE_URL }
+  - name: QUEUE_BACKEND
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: NOTIFICATION_QUEUE_BACKEND }
+  - name: EMAIL_BACKEND
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: NOTIFICATION_EMAIL_BACKEND }
+  - name: FROM_EMAIL
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: FROM_EMAIL }
+  - name: POLL_INTERVAL_MS
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: NOTIFICATION_POLL_INTERVAL }

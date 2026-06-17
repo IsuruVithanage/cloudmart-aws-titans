@@ -40,31 +40,41 @@ jobs:
       # 3. Connect to the AWS EKS Cluster
       - name: Update Kubeconfig
         run: |
-          # Replace 'cloudmart-cluster' with the actual name of your EKS cluster
-          aws eks update-kubeconfig --region ap-south-1 --name cloudmart-cluster
+          # Updated to match your actual cluster name from your logs
+          aws eks update-kubeconfig --region ap-south-1 --name cloudmart-eks
 
-      # 4. Deploy Kubernetes Manifests
-      - name: Deploy Frontend
+      # 4. Deploy using Helm instead of kubectl
+      - name: Deploy Frontend via Helm
         run: |
-          kubectl set image deployment/frontend frontend=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/frontend:${{ github.event.workflow_run.head_sha }} -n ${{ env.NAMESPACE }}
-          kubectl rollout status deployment/frontend -n ${{ env.NAMESPACE }}
+          helm upgrade --install frontend ./helm/cloudmart-service \
+            --namespace ${{ env.NAMESPACE }} \
+            -f ./helm/cloudmart-service/values-frontend.yaml \
+            --set image.tag=${{ github.event.workflow_run.head_sha }}
 
-      - name: Deploy Product Service
+      - name: Deploy Product Service via Helm
         run: |
-          kubectl set image deployment/product-service product-service=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/product-service:${{ github.event.workflow_run.head_sha }} -n ${{ env.NAMESPACE }}
-          kubectl rollout status deployment/product-service -n ${{ env.NAMESPACE }}
+          helm upgrade --install product-service ./helm/cloudmart-service \
+            --namespace ${{ env.NAMESPACE }} \
+            -f ./helm/cloudmart-service/values-product.yaml \
+            --set image.tag=${{ github.event.workflow_run.head_sha }}
 
-      - name: Deploy Order Service
+      - name: Deploy Order Service via Helm
         run: |
-          kubectl set image deployment/order-service order-service=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/order-service:${{ github.event.workflow_run.head_sha }} -n ${{ env.NAMESPACE }}
-          kubectl rollout status deployment/order-service -n ${{ env.NAMESPACE }}
+          helm upgrade --install order-service ./helm/cloudmart-service \
+            --namespace ${{ env.NAMESPACE }} \
+            -f ./helm/cloudmart-service/values-order.yaml \
+            --set image.tag=${{ github.event.workflow_run.head_sha }}
 
-      - name: Deploy User Service
+      - name: Deploy User Service via Helm
         run: |
-          kubectl set image deployment/user-service user-service=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/user-service:${{ github.event.workflow_run.head_sha }} -n ${{ env.NAMESPACE }}
-          kubectl rollout status deployment/user-service -n ${{ env.NAMESPACE }}
+          helm upgrade --install user-service ./helm/cloudmart-service \
+            --namespace ${{ env.NAMESPACE }} \
+            -f ./helm/cloudmart-service/values-user.yaml \
+            --set image.tag=${{ github.event.workflow_run.head_sha }}
 
-      - name: Deploy Notification Service
+      - name: Deploy Notification Service via Helm
         run: |
-          kubectl set image deployment/notification-service notification-service=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/notification-service:${{ github.event.workflow_run.head_sha }} -n ${{ env.NAMESPACE }}
-          kubectl rollout status deployment/notification-service -n ${{ env.NAMESPACE }}
+          helm upgrade --install notification-service ./helm/cloudmart-service \
+            --namespace ${{ env.NAMESPACE }} \
+            -f ./helm/cloudmart-service/values-notification.yaml \
+            --set image.tag=${{ github.event.workflow_run.head_sha }}

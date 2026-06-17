@@ -1,0 +1,23 @@
+# Default base configuration
+replicaCount: 1
+namespace: default
+serviceName: "microservice"
+serviceAccountName: "default"
+
+image:
+  repository: ""
+  tag: "latest"
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "250m"
+    memory: "256Mi"

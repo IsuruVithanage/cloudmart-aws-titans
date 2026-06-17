@@ -1,0 +1,47 @@
+serviceName: "order-service"
+namespace: "cloudmart-prod"
+replicaCount: 2
+serviceAccountName: "order-service-sa"
+
+image:
+  repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/order-service"
+  tag: "latest"
+
+service:
+  type: "ClusterIP"
+  port: 8002
+  targetPort: 8002
+
+probes:
+  readinessPath: "/ready"
+  livenessPath: "/health"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 60
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+
+env:
+  - name: PORT
+    value: "8002"
+  - name: PRODUCT_SERVICE_URL
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: PRODUCT_SERVICE_URL }
+  - name: QUEUE_BACKEND
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: ORDER_QUEUE_BACKEND }
+  - name: AWS_REGION
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: AWS_REGION }
+  - name: SQS_QUEUE_URL
+    valueFrom:
+      configMapKeyRef: { name: cloudmart-config, key: SQS_QUEUE_URL }
