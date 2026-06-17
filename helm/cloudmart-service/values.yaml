@@ -1,23 +1,35 @@
-# Default base configuration
+# Default base configuration fallbacks for helm lint
 replicaCount: 1
-namespace: default
+namespace: "default"
 serviceName: "microservice"
-serviceAccountName: "default"
+serviceAccountName: ""
 
 image:
   repository: ""
   tag: "latest"
-  pullPolicy: Always
+  pullPolicy: "Always"
 
 service:
-  type: ClusterIP
+  type: "ClusterIP"
   port: 80
-  targetPort: 5000
+  targetPort: 80
+
+# ADD THIS: Default probe paths so the linter doesn't see 'nil'
+probes:
+  readinessPath: "/health"
+  livenessPath: "/health"
+
+# ADD THIS: Default blank autoscaling block
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 60
 
 resources:
   requests:
-    cpu: "100m"
-    memory: "128Mi"
+    cpu: "50m"
+    memory: "64Mi"
   limits:
-    cpu: "250m"
-    memory: "256Mi"
+    cpu: "200m"
+    memory: "128Mi"

@@ -34,15 +34,18 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+
+          # Defensive variable mapping to prevent Nil Pointer exceptions
+          {{- $probes := .Values.probes | default dict }}
           readinessProbe:
             httpGet:
-              path: {{ .Values.probes.readinessPath }}
+              path: {{ $probes.readinessPath | default "/health" }}
               port: {{ .Values.service.targetPort }}
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: {{ .Values.probes.livenessPath }}
+              path: {{ $probes.livenessPath | default "/health" }}
               port: {{ .Values.service.targetPort }}
             initialDelaySeconds: 10
             periodSeconds: 30
