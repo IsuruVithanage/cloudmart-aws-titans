@@ -1,0 +1,109 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudmart-frontend
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/isuruvithanage/cloudmart-aws-titans.git'
+    targetRevision: HEAD
+    path: helm/cloudmart-service
+    helm:
+      valueFiles:
+        - values-frontend.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cloudmart-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudmart-product
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/isuruvithanage/cloudmart-aws-titans.git'
+    targetRevision: HEAD
+    path: helm/cloudmart-service
+    helm:
+      valueFiles:
+        - values-product.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cloudmart-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudmart-order
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/isuruvithanage/cloudmart-aws-titans.git'
+    targetRevision: HEAD
+    path: helm/cloudmart-service
+    helm:
+      valueFiles:
+        - values-order.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cloudmart-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudmart-notification
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/isuruvithanage/cloudmart-aws-titans.git'
+    targetRevision: HEAD
+    path: helm/cloudmart-service
+    helm:
+      valueFiles:
+        - values-notification.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cloudmart-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudmart-user
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/isuruvithanage/cloudmart-aws-titans.git'
+    targetRevision: HEAD
+    path: helm/cloudmart-service
+    helm:
+      valueFiles:
+        - values-user.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cloudmart-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -8,73 +8,44 @@ on:
       - completed
     branches: [ "main", "develop" ]
 
+# Explicit permissions required for the GitHub Action to push commits back to the repository
+permissions:
+  contents: write
+
 jobs:
-  deploy-to-eks:
-    # Proceed with deployment only if the CI workflow was a success
+  update-gitops-repo:
+    # Proceed with updating the repo only if the CI workflow was a success
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # 1. Select the Target Environment
-      - name: Set target environment (Staging vs Prod)
-        id: set-env
-        run: |
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
-            echo "NAMESPACE=cloudmart-prod" >> $GITHUB_ENV
-            echo "Deploying to PRODUCTION environment"
-          else
-            echo "NAMESPACE=cloudmart-staging" >> $GITHUB_ENV
-            echo "Deploying to STAGING environment"
-          fi
-
-      # 2. Provide AWS Credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          # Required to allow GitHub Actions to push commits back to the repo
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3. Connect to the AWS EKS Cluster
-      - name: Update Kubeconfig
+      - name: Update Helm Image Tags
         run: |
-          # Updated to match your actual cluster name from your logs
-          aws eks update-kubeconfig --region ap-south-1 --name cloudmart-eks
+          # Grab the Git SHA from the CI pipeline that just built the images
+          NEW_TAG="${{ github.event.workflow_run.head_sha }}"
+          echo "Updating Helm charts to use image tag: $NEW_TAG"
+          
+          # Use sed to find the 'tag: ...' line and replace it with the new Git SHA
+          # This updates all 5 environment values files
+          sed -i "s/tag: .*/tag: \"$NEW_TAG\"/g" helm/cloudmart-service/values-frontend.yaml
+          sed -i "s/tag: .*/tag: \"$NEW_TAG\"/g" helm/cloudmart-service/values-product.yaml
+          sed -i "s/tag: .*/tag: \"$NEW_TAG\"/g" helm/cloudmart-service/values-order.yaml
+          sed -i "s/tag: .*/tag: \"$NEW_TAG\"/g" helm/cloudmart-service/values-user.yaml
+          sed -i "s/tag: .*/tag: \"$NEW_TAG\"/g" helm/cloudmart-service/values-notification.yaml
 
-      # 4. Deploy using Helm instead of kubectl
-      - name: Deploy Frontend via Helm
+      - name: Commit and Push Changes
         run: |
-          helm upgrade --install frontend ./helm/cloudmart-service \
-            --namespace ${{ env.NAMESPACE }} \
-            -f ./helm/cloudmart-service/values-frontend.yaml \
-            --set image.tag=${{ github.event.workflow_run.head_sha }}
-
-      - name: Deploy Product Service via Helm
-        run: |
-          helm upgrade --install product-service ./helm/cloudmart-service \
-            --namespace ${{ env.NAMESPACE }} \
-            -f ./helm/cloudmart-service/values-product.yaml \
-            --set image.tag=${{ github.event.workflow_run.head_sha }}
-
-      - name: Deploy Order Service via Helm
-        run: |
-          helm upgrade --install order-service ./helm/cloudmart-service \
-            --namespace ${{ env.NAMESPACE }} \
-            -f ./helm/cloudmart-service/values-order.yaml \
-            --set image.tag=${{ github.event.workflow_run.head_sha }}
-
-      - name: Deploy User Service via Helm
-        run: |
-          helm upgrade --install user-service ./helm/cloudmart-service \
-            --namespace ${{ env.NAMESPACE }} \
-            -f ./helm/cloudmart-service/values-user.yaml \
-            --set image.tag=${{ github.event.workflow_run.head_sha }}
-
-      - name: Deploy Notification Service via Helm
-        run: |
-          helm upgrade --install notification-service ./helm/cloudmart-service \
-            --namespace ${{ env.NAMESPACE }} \
-            -f ./helm/cloudmart-service/values-notification.yaml \
-            --set image.tag=${{ github.event.workflow_run.head_sha }}
+          # Configure the Git bot identity
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Stage the modified values files
+          git add helm/cloudmart-service/values-*.yaml
+          
+          # Only commit and push if there are actual changes detected
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(gitops): update image tags to $NEW_TAG [skip ci]" && git push)
