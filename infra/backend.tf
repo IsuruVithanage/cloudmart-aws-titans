@@ -5,5 +5,6 @@ terraform {
     region       = "ap-south-1"
     use_lockfile = true
     encrypt      = true
+    dynamodb_table = "cloudmart-tf-lock"
   }
 }
