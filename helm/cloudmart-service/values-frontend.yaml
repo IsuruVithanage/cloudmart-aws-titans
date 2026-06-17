@@ -4,7 +4,7 @@ replicaCount: 2
 
 image:
   repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/frontend"
-  tag: "latest"
+  tag: "5e51b61bfaa13e745e33168669ff2108dcb09bb9"
 
 service:
   type: "ClusterIP"
