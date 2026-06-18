@@ -36,6 +36,12 @@ instance_types = ["t3.small"]
 ami_type       = "AL2023_x86_64_STANDARD"
 capacity_type  = "ON_DEMAND"
 
+  metadata_options = {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"  # enforces IMDSv2
+    http_put_response_hop_limit = 2
+  }
+
   # IAM policies for observability — Section 3.6 [M] + [D]
   iam_role_additional_policies = {
     CloudWatchAgent = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
