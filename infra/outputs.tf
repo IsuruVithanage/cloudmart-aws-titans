@@ -29,3 +29,7 @@ output "ses_email" {
 output "ses_identity_arn" {
   value = module.data_services.ses_identity_arn
 }
+
+output "waf_arn" {
+  value = module.security.waf_arn
+}

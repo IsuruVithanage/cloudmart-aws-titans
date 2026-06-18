@@ -25,6 +25,10 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Values.serviceName }}
+          securityContext:
+            runAsNonRoot: true
+            privileged: false
+            allowPrivilegeEscalation: false
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           ports:
             - containerPort: {{ .Values.service.targetPort }}

@@ -55,6 +55,12 @@ module "observability" {
   tags            = local.tags
 }
 
+# ==================== SECURITY ====================
+module "security" {
+  source = "./modules/security"
+  tags   = local.tags
+}
+
 # ==================== ADDONS (Helm + Kubernetes Resources) ====================
 module "addons" {
   source = "./modules/addons"

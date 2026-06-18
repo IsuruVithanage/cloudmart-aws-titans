@@ -1,0 +1,75 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-security-standards
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-run-as-non-root
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - kube-system
+              - argocd
+              - keda
+              - external-secrets
+              - kyverno
+      validate:
+        message: "Running as root is not allowed. Set securityContext.runAsNonRoot to true."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  runAsNonRoot: true
+
+    - name: disallow-privileged-containers
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - kube-system
+              - argocd
+              - keda
+              - external-secrets
+              - kyverno
+      validate:
+        message: "Privileged mode is not allowed. Set securityContext.privileged to false."
+        pattern:
+          spec:
+            containers:
+              - =(securityContext):
+                  =(privileged): "false"
+
+    - name: restrict-image-registries
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - kube-system
+              - argocd
+              - keda
+              - external-secrets
+              - kyverno
+      validate:
+        message: "Images may only be pulled from the approved ECR registry: 787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/"
+        pattern:
+          spec:
+            containers:
+              - image: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/*"

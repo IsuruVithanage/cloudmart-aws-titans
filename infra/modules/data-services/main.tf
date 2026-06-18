@@ -5,6 +5,17 @@ subnet_ids = var.database_subnets
 tags       = var.tags
 }
 
+resource "aws_db_parameter_group" "postgres_ssl" {
+  name        = "cloudmart-postgres-ssl"
+  family      = "postgres18"
+  description = "Force SSL for PostgreSQL"
+
+  parameter {
+    name  = "rds.force_ssl"
+    value = "1"
+  }
+}
+
 resource "aws_db_instance" "postgres" {
 identifier              = "cloudmart-postgres"
 engine                  = "postgres"
@@ -18,6 +29,8 @@ vpc_security_group_ids  = [var.database_sg_id]
 skip_final_snapshot     = true
 deletion_protection     = false
 storage_encrypted       = true
+parameter_group_name    = aws_db_parameter_group.postgres_ssl.name
+apply_immediately       = true
 backup_retention_period = 1
 backup_window           = "02:00-03:00"
 multi_az                = true   
@@ -33,6 +46,10 @@ hash_key     = "id"
 attribute {
 name = "id"
 type = "S"
+}
+
+server_side_encryption {
+  enabled = true
 }
 
 tags = var.tags
