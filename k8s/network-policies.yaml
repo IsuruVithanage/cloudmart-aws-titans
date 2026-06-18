@@ -73,7 +73,9 @@ spec:
   policyTypes:
   - Ingress
   ingress:
-  - from: []          # Allow from any source (ALB has dynamic IPs)
+  - from:
+    - ipBlock:
+        cidr: 0.0.0.0/0   # Allow from any source (ALB has dynamic IPs)
     ports:
     - protocol: TCP
       port: 80
