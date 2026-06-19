@@ -5,7 +5,7 @@ serviceAccountName: "notification-service-sa"
 
 image:
   repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/notification-service"
-  tag: "52c23152675445d76ab26405adf6332ca9c1a257"
+  tag: "327f51984b61c36d4dcabd67ff1d772bad40cf44"
 
 service:
   type: "ClusterIP"
