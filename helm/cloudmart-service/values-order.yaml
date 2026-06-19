@@ -5,7 +5,7 @@ serviceAccountName: "order-service-sa"
 
 image:
   repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/order-service"
-  tag: "e69d5c34ca8eadea9f14db6bf3e6ab10c543c73d"
+  tag: "4f5591a0f4bb3f861f403c83bbf56d9553ada1ff"
 
 service:
   type: "ClusterIP"
