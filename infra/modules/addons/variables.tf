@@ -27,3 +27,8 @@ variable "db_secret_arn" {
   description = "ARN of the Secrets Manager secret containing DB credentials"
   type        = string
 }
+
+variable "cluster_autoscaler_role_arn" {
+  description = "IAM Role ARN for Cluster Autoscaler"
+  type        = string
+}

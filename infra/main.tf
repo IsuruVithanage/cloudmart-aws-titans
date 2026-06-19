@@ -72,13 +72,15 @@ module "addons" {
   alb_controller_role_arn    = module.iam_eks_role_alb_controller.iam_role_arn
   external_secrets_role_arn  = module.iam_eks_role_external_secrets.iam_role_arn
   keda_role_arn              = module.iam_eks_role_keda.iam_role_arn
+  cluster_autoscaler_role_arn = module.iam_eks_role_cluster_autoscaler.iam_role_arn
   db_secret_arn              = module.data_services.secret_arn
 
   depends_on = [
     module.eks,
     module.iam_eks_role_alb_controller,
     module.iam_eks_role_external_secrets,
-    module.iam_eks_role_keda
+    module.iam_eks_role_keda,
+    module.iam_eks_role_cluster_autoscaler
   ]
 }
 
