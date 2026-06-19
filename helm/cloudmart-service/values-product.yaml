@@ -5,7 +5,7 @@ serviceAccountName: "product-service-sa"
 
 image:
   repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/product-service"
-  tag: "d7ee37a099def0dce7e48204bf4359301749db60"
+  tag: "34cf97a423e782b8f53153f838ccb48ca61ac4f3"
 
 service:
   type: "ClusterIP"
