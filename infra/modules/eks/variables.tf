@@ -17,3 +17,9 @@ variable "public_subnets" {
 variable "tags" {
   type = map(string)
 }
+
+variable "cluster_admin_users" {
+  description = "List of IAM usernames to be granted cluster admin permissions"
+  type        = list(string)
+  default     = []
+}

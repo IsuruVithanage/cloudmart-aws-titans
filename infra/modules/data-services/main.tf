@@ -11,8 +11,9 @@ resource "aws_db_parameter_group" "postgres_ssl" {
   description = "Force SSL for PostgreSQL"
 
   parameter {
-    name  = "rds.force_ssl"
-    value = "1"
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "pending-reboot"
   }
 }
 

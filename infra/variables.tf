@@ -50,3 +50,9 @@ variable "Project" {
   type        = string
   default     = "cloudmart"
 }
+
+variable "cluster_admin_users" {
+  description = "List of IAM usernames to be granted cluster admin permissions"
+  type        = list(string)
+  default     = []
+}
