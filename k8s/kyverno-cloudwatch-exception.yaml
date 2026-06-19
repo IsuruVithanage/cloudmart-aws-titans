@@ -1,0 +1,20 @@
+apiVersion: kyverno.io/v2beta1
+kind: PolicyException
+metadata:
+  name: amazon-cloudwatch-exception
+  namespace: amazon-cloudwatch
+spec:
+  exceptions:
+  - policyName: enforce-security-standards
+    ruleNames:
+    - require-run-as-non-root
+    - disallow-privileged-containers
+    - restrict-image-registries
+    - autogen-require-run-as-non-root
+    - autogen-disallow-privileged-containers
+    - autogen-restrict-image-registries
+  match:
+    any:
+    - resources:
+        namespaces:
+        - amazon-cloudwatch
