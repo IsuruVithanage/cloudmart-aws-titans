@@ -1,6 +1,6 @@
 serviceName: "frontend"
 namespace: "cloudmart-prod"
-replicaCount: 2
+replicaCount: 1
 
 image:
   repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/frontend"
