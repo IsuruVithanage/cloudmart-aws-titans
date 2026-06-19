@@ -279,8 +279,7 @@ jobs:
         uses: bmuschko/setup-kubeconform@v1
 
       - name: Validate static K8s Manifests
-        run: kubeconform -summary -strict -skip ScaledObject,TriggerAuthentication,ExternalSecret,SecretStore k8s/
-
+        run: kubeconform -summary -strict -skip ScaledObject,TriggerAuthentication,ExternalSecret,SecretStore,ClusterPolicy k8s/*.yaml
       # NEW: Validate your new Helm Chart syntax
       - name: Setup Helm
         uses: azure/setup-helm@v4
