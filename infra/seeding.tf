@@ -1,84 +1,100 @@
 # ============================================================
-# DynamoDB Seeding Job - Runs once after product-service is ready
+# DynamoDB Seeding Job - Runs once using local AWS CLI
 # ============================================================
 
-resource "kubernetes_service_account" "product_service_sa" {
-  metadata {
-    name      = "product-service-sa"
-    namespace = "cloudmart-prod"
-    annotations = {
-      "eks.amazonaws.com/role-arn" = module.iam_eks_role_product.iam_role_arn
-    }
-  }
-
-  depends_on = [module.addons]
-}
-
-resource "kubernetes_job" "dynamodb_seeder" {
-  metadata {
-    name      = "dynamodb-seeder"
-    namespace = "cloudmart-prod"
-  }
-
-  spec {
-    template {
-      metadata {
-        name = "dynamodb-seeder"
-      }
-
-      spec {
-        restart_policy = "Never"
-
-        container {
-          name  = "seeder"
-          image = "python:3.12-slim"
-
-          command = ["/bin/sh", "-c"]
-          args = [<<EOF
-            pip install boto3 && python - <<'PYCODE'
-import boto3
-from decimal import Decimal
-import os
-import time
-
-print("Starting DynamoDB seeding...")
-
-dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
-table = dynamodb.Table('cloudmart-products')
-
-products = [
-    {"id": "prod-001", "name": "Wireless Bluetooth Headphones", "description": "Premium noise-cancelling headphones", "price": Decimal("79.99"), "category": "electronics", "stock": 150, "imageUrl": "/images/headphones.jpg"},
-    {"id": "prod-002", "name": "Organic Ceylon Tea (100 bags)", "description": "Premium hand-picked Ceylon tea", "price": Decimal("12.99"), "category": "food", "stock": 500, "imageUrl": "/images/ceylon-tea.jpg"},
-    {"id": "prod-003", "name": "USB-C Laptop Stand", "description": "Adjustable aluminium stand", "price": Decimal("49.99"), "category": "electronics", "stock": 75, "imageUrl": "/images/laptop-stand.jpg"},
-    {"id": "prod-004", "name": "Handloom Cotton Sarong", "description": "Traditional Sri Lankan handloom sarong", "price": Decimal("24.99"), "category": "clothing", "stock": 200, "imageUrl": "/images/sarong.jpg"},
-    {"id": "prod-005", "name": "Mechanical Keyboard (TKL)", "description": "Cherry MX Brown switches", "price": Decimal("89.99"), "category": "electronics", "stock": 60, "imageUrl": "/images/keyboard.jpg"},
-    {"id": "prod-006", "name": "Cold Pressed Coconut Oil (500ml)", "description": "Virgin coconut oil from Sri Lanka", "price": Decimal("8.99"), "category": "food", "stock": 300, "imageUrl": "/images/coconut-oil.jpg"},
-]
-
-for product in products:
-    table.put_item(Item=product)
-    print(f"✅ Inserted: {product['name']}")
-
-print("🎉 DynamoDB seeding completed successfully!")
-PYCODE
-          EOF
-          ]
-
-          env {
-            name  = "AWS_REGION"
-            value = "ap-south-1"
+resource "local_file" "seed_data" {
+  filename = "${path.module}/seed.json"
+  content = jsonencode({
+    "cloudmart-products" = [
+      {
+        PutRequest = {
+          Item = {
+            id          = { S = "prod-001" }
+            name        = { S = "Wireless Bluetooth Headphones" }
+            description = { S = "Premium noise-cancelling headphones" }
+            price       = { N = "79.99" }
+            category    = { S = "electronics" }
+            stock       = { N = "150" }
+            imageUrl    = { S = "/images/headphones.jpg" }
           }
         }
-
-        service_account_name = "product-service-sa"   # Reuse product service role (has DynamoDB access)
+      },
+      {
+        PutRequest = {
+          Item = {
+            id          = { S = "prod-002" }
+            name        = { S = "Organic Ceylon Tea (100 bags)" }
+            description = { S = "Premium hand-picked Ceylon tea" }
+            price       = { N = "12.99" }
+            category    = { S = "food" }
+            stock       = { N = "500" }
+            imageUrl    = { S = "/images/ceylon-tea.jpg" }
+          }
+        }
+      },
+      {
+        PutRequest = {
+          Item = {
+            id          = { S = "prod-003" }
+            name        = { S = "USB-C Laptop Stand" }
+            description = { S = "Adjustable aluminium stand" }
+            price       = { N = "49.99" }
+            category    = { S = "electronics" }
+            stock       = { N = "75" }
+            imageUrl    = { S = "/images/laptop-stand.jpg" }
+          }
+        }
+      },
+      {
+        PutRequest = {
+          Item = {
+            id          = { S = "prod-004" }
+            name        = { S = "Handloom Cotton Sarong" }
+            description = { S = "Traditional Sri Lankan handloom sarong" }
+            price       = { N = "24.99" }
+            category    = { S = "clothing" }
+            stock       = { N = "200" }
+            imageUrl    = { S = "/images/sarong.jpg" }
+          }
+        }
+      },
+      {
+        PutRequest = {
+          Item = {
+            id          = { S = "prod-005" }
+            name        = { S = "Mechanical Keyboard (TKL)" }
+            description = { S = "Cherry MX Brown switches" }
+            price       = { N = "89.99" }
+            category    = { S = "electronics" }
+            stock       = { N = "60" }
+            imageUrl    = { S = "/images/keyboard.jpg" }
+          }
+        }
+      },
+      {
+        PutRequest = {
+          Item = {
+            id          = { S = "prod-006" }
+            name        = { S = "Cold Pressed Coconut Oil (500ml)" }
+            description = { S = "Virgin coconut oil from Sri Lanka" }
+            price       = { N = "8.99" }
+            category    = { S = "food" }
+            stock       = { N = "300" }
+            imageUrl    = { S = "/images/coconut-oil.jpg" }
+          }
+        }
       }
-    }
+    ]
+  })
+}
 
-    backoff_limit = 2
-  }
-
+resource "null_resource" "dynamodb_seeder" {
   depends_on = [
-    module.addons,
-    kubernetes_service_account.product_service_sa
+    module.data_services,
+    local_file.seed_data
   ]
+
+  provisioner "local-exec" {
+    command = "aws dynamodb batch-write-item --request-items file://${local_file.seed_data.filename} --region ap-south-1"
+  }
 }
