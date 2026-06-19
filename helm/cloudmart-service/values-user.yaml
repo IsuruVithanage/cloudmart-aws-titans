@@ -5,7 +5,7 @@ serviceAccountName: "user-service-sa"
 
 image:
   repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/user-service"
-  tag: "5e51b61bfaa13e745e33168669ff2108dcb09bb9"
+  tag: "d16d607ab1ccd70cbbb4cc3382a895300cfbd502"
 
 service:
   type: "ClusterIP"
