@@ -20,7 +20,17 @@ resource "aws_iam_policy" "product_service" {
     Statement = [
       {
         Effect   = "Allow",
-        Action   = ["dynamodb:*"],
+        Action   = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:Scan",
+          "dynamodb:Query",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem",
+          "dynamodb:ConditionCheckItem"
+        ],
         Resource = "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/cloudmart-products"
       },
       {
