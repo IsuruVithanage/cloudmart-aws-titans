@@ -23,28 +23,24 @@ resource "aws_cloudwatch_log_group" "product_service" {
   tags              = var.tags
 }
 
-# Log group for order-service — Section 3.6 [M]
 resource "aws_cloudwatch_log_group" "order_service" {
   name              = "/aws/containerinsights/${var.cluster_name}/application/order-service"
   retention_in_days = 7
   tags              = var.tags
 }
 
-# Log group for user-service — Section 3.6 [M]
 resource "aws_cloudwatch_log_group" "user_service" {
   name              = "/aws/containerinsights/${var.cluster_name}/application/user-service"
   retention_in_days = 7
   tags              = var.tags
 }
 
-# Log group for notification-service — Section 3.6 [M]
 resource "aws_cloudwatch_log_group" "notification_service" {
   name              = "/aws/containerinsights/${var.cluster_name}/application/notification-service"
   retention_in_days = 7
   tags              = var.tags
 }
 
-# Log group for frontend — Section 3.6 [M]
 resource "aws_cloudwatch_log_group" "frontend" {
   name              = "/aws/containerinsights/${var.cluster_name}/application/frontend"
   retention_in_days = 7
@@ -263,7 +259,6 @@ resource "aws_cloudwatch_dashboard" "cloudmart" {
         }
       },
 
-      # ---- Row 4: HTTP Request Rate (product-service) — Section 3.6 [M] ----
       {
         type   = "metric"
         x      = 0
