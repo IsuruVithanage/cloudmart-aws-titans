@@ -5,7 +5,7 @@ serviceAccountName: "order-service-sa"
 
 image:
   repository: "787308166325.dkr.ecr.ap-south-1.amazonaws.com/cloudmart/order-service"
-  tag: "9cdd517f48acc5eaadd6cfbcabd754628ac7d6af"
+  tag: "f00574f7019a3cdbd5d5f1521ee675441b9eb9e7"
 
 service:
   type: "ClusterIP"
@@ -19,7 +19,7 @@ probes:
 autoscaling:
   enabled: true
   minReplicas: 2
-  maxReplicas: 6
+  maxReplicas: 2
   targetCPUUtilizationPercentage: 60
 
 resources:
