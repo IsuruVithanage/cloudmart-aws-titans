@@ -9,6 +9,9 @@ ses_email = "isuruvithanagemv@gmail.com"
 # These are Sandbox Recipients
 test_recipient_emails = [
   "ashansalinda5@gmail.com",
+  "kavithrashintha@gmail.com",
+  "ushanisuru70@gmail.com",
+  "savithsabeyrathne@gmail.com",
 ]
 
 cluster_admin_users = [
