@@ -10,3 +10,11 @@ ses_email = "isuruvithanagemv@gmail.com"
 test_recipient_emails = [
   "ashansalinda5@gmail.com",
 ]
+
+cluster_admin_users = [
+  "ashan",
+  "isuru",
+  "kawith",
+  "ushan",
+  "savith"
+]

@@ -15,7 +15,18 @@ cluster_endpoint_public_access  = true
 cluster_endpoint_private_access = true
 authentication_mode             = "API_AND_CONFIG_MAP"
 
-enable_cluster_creator_admin_permissions = true
+access_entries = {
+for user in var.cluster_admin_users : "${user}_admin" => {
+  principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${user}"
+  kubernetes_groups = []
+  policy_associations = {
+    admin = {
+      policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+      access_scope = { type = "cluster" }
+    }
+  }
+}
+}
 
 # ==================== Observability ====================
 # Deploys CloudWatch Agent (Container Insights metrics) + Fluent Bit (log shipping)

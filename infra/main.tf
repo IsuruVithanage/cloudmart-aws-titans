@@ -18,12 +18,13 @@ module "networking" {
 
 # ==================== EKS ====================
 module "eks" {
-  source          = "./modules/eks"
-  cluster_name    = var.cluster_name
-  vpc_id          = module.networking.vpc_id
-  private_subnets = module.networking.private_subnets
-  public_subnets  = module.networking.public_subnets
-  tags            = local.tags
+  source              = "./modules/eks"
+  cluster_name        = var.cluster_name
+  vpc_id              = module.networking.vpc_id
+  private_subnets     = module.networking.private_subnets
+  public_subnets      = module.networking.public_subnets
+  cluster_admin_users = var.cluster_admin_users
+  tags                = local.tags
 }
 
 # ==================== ECR ====================
