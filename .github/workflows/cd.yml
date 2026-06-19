@@ -49,3 +49,24 @@ jobs:
           
           # Only commit and push if there are actual changes detected
           git diff --quiet && git diff --staged --quiet || (git commit -m "chore(gitops): update image tags to $NEW_TAG [skip ci]" && git push)
+
+  smoke-test:
+    needs: update-gitops-repo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for ArgoCD to Sync
+        run: |
+          echo "Waiting 60 seconds for ArgoCD to detect changes and sync to AWS EKS..."
+          sleep 60
+
+      - name: HTTP Health Check for Frontend
+        run: |
+          echo "Testing Frontend Application..."
+          curl -f http://<ඔබගේ-INGRESS-හෝ-LOAD-BALANCER-URL>/ || exit 1
+          echo "Frontend is up and running!"
+
+      - name: HTTP Health Check for Product Service Readiness
+        run: |
+          echo "Testing Product Service..."
+          curl -f http://<ඔබගේ-INGRESS-හෝ-LOAD-BALANCER-URL>/api/product/health || exit 1
+          echo "Product Service is responding correctly!"
