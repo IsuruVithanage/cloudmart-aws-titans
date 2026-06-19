@@ -27,7 +27,8 @@ spec:
         - name: {{ .Values.serviceName }}
           securityContext:
             runAsNonRoot: true
-            runAsUser: {{ .Values.securityContext.runAsUser | default 1000 }}
+            {{- $secContext := .Values.securityContext | default dict }}
+            runAsUser: {{ $secContext.runAsUser | default 1000 }}
             privileged: false
             allowPrivilegeEscalation: false
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
