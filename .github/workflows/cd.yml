@@ -62,11 +62,11 @@ jobs:
       - name: HTTP Health Check for Frontend
         run: |
           echo "Testing Frontend Application..."
-          curl -f http://<ඔබගේ-INGRESS-හෝ-LOAD-BALANCER-URL>/ || exit 1
+          curl -f http:http://k8s-cloudmart-4211e3156c-1075033185.ap-south-1.elb.amazonaws.com/
           echo "Frontend is up and running!"
 
       - name: HTTP Health Check for Product Service Readiness
         run: |
           echo "Testing Product Service..."
-          curl -f http://<ඔබගේ-INGRESS-හෝ-LOAD-BALANCER-URL>/api/product/health || exit 1
+          curl -f http://k8s-cloudmart-4211e3156c-1075033185.ap-south-1.elb.amazonaws.com/api/product/health || exit 1
           echo "Product Service is responding correctly!"
