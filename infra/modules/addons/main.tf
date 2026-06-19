@@ -309,32 +309,24 @@ resource "helm_release" "kyverno" {
     value = "1"
   }
 
-  # Override admissionReports cleanup image
-  set {
-    name  = "cleanupJobs.admissionReports.image.registry"
-    value = "registry.k8s.io"
-  }
   set {
     name  = "cleanupJobs.admissionReports.image.repository"
-    value = "kubectl"
-  }
-  set {
-    name  = "cleanupJobs.admissionReports.image.tag"
-    value = "v1.28.5"
+    value = "bitnami/kubectl"
   }
 
-  # Override clusterAdmissionReports cleanup image
   set {
-    name  = "cleanupJobs.clusterAdmissionReports.image.registry"
-    value = "registry.k8s.io"
+    name  = "cleanupJobs.admissionReports.image.tag"
+    value = "latest"
   }
+
   set {
     name  = "cleanupJobs.clusterAdmissionReports.image.repository"
-    value = "kubectl"
+    value = "bitnami/kubectl"
   }
+
   set {
     name  = "cleanupJobs.clusterAdmissionReports.image.tag"
-    value = "v1.28.5"
+    value = "latest"
   }
 }
 # ================================================
