@@ -1,0 +1,178 @@
+# ==================== AWS X-Ray Daemon DaemonSet ====================
+# Distributed tracing for CloudMart services
+#
+# The X-Ray daemon runs on every EKS worker node as a DaemonSet.
+# Application pods (order-service, product-service) send UDP trace segments
+# to 127.0.0.1:2000 (localhost), which the daemon forwards to the X-Ray API.
+#
+# Why DaemonSet (not Deployment)?
+#   Each pod communicates with the daemon on its local node via localhost.
+#   A DaemonSet guarantees exactly one daemon per node — no pod-to-pod
+#   routing needed, and no single point of failure.
+#
+# IAM permissions:
+#   The EKS node IAM role already includes AWSXRayDaemonWriteAccess
+#   (set in infra/modules/eks/main.tf → iam_role_additional_policies).
+#   Individual service pods (product-service-sa, order-service-sa) also have
+#   xray:PutTraceSegments via their IRSA roles (infra/irsa.tf).
+#
+# Service instrumentation status:
+#   - order-service: aws-xray-sdk-core + aws-xray-sdk-express installed and
+#     configured (AWSXRay.setDaemonAddress('127.0.0.1:2000') in index.js).
+#     X-Ray segment open/close middleware active on /api/* routes.
+#   - product-service: aws-xray-sdk (Python) should be added (see below).
+#   - Other services: no inbound HTTP routes that require tracing.
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: xray-daemon
+  namespace: cloudmart-prod
+  labels:
+    app: xray-daemon
+---
+# ClusterRole: X-Ray daemon needs no Kubernetes API access —
+# it only sends UDP segments from app pods to the AWS X-Ray API.
+# The minimal role below is granted only for pod self-identification.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: xray-daemon
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: xray-daemon
+subjects:
+  - kind: ServiceAccount
+    name: xray-daemon
+    namespace: cloudmart-prod
+roleRef:
+  kind: ClusterRole
+  name: xray-daemon
+  apiGroup: rbac.authorization.k8s.io
+---
+# ConfigMap: daemon configuration
+# Bind to UDP 2000 (segments) and TCP 2000 (health/relay).
+# TotalBufferSizeMB: limits memory to 50 MB — appropriate for t3.small nodes.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: xray-daemon-config
+  namespace: cloudmart-prod
+data:
+  config.yaml: |
+    Socket:
+      UDPAddress: "0.0.0.0:2000"
+      TCPAddress: "0.0.0.0:2000"
+    TotalBufferSizeMB: 50
+    Logging:
+      LogLevel: "warn"
+    LocalMode: false
+    Region: "ap-south-1"
+---
+# DaemonSet: one X-Ray daemon pod per EKS node
+# hostNetwork: true — pods can reach the daemon at 127.0.0.1:2000 (localhost)
+# without needing a Kubernetes Service (no east-west traffic overhead).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: xray-daemon
+  namespace: cloudmart-prod
+  labels:
+    app: xray-daemon
+spec:
+  selector:
+    matchLabels:
+      app: xray-daemon
+  template:
+    metadata:
+      labels:
+        app: xray-daemon
+    spec:
+      serviceAccountName: xray-daemon
+      hostNetwork: true        # Pods reach daemon at 127.0.0.1:2000
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: xray-daemon
+          image: amazon/aws-xray-daemon:3.x
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: false    # X-Ray daemon image requires root; exempted by Kyverno namespace exclusion
+            allowPrivilegeEscalation: false
+          command:
+            - /usr/bin/xray
+            - -c
+            - /aws/xray/config.yaml
+            - -l
+            - warn
+          ports:
+            - name: xray-ingest
+              containerPort: 2000
+              hostPort: 2000
+              protocol: UDP
+            - name: xray-tcp
+              containerPort: 2000
+              hostPort: 2000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /aws/xray
+              readOnly: true
+          resources:
+            requests:
+              cpu: 32m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          livenessProbe:
+            tcpSocket:
+              port: 2000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 2000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: xray-daemon-config
+      tolerations:
+        # Run on all nodes including those tainted for system workloads
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
+---
+# Service: exposes the daemon for any pod that wants to reference it
+# by DNS rather than localhost (fallback; most pods use 127.0.0.1:2000)
+apiVersion: v1
+kind: Service
+metadata:
+  name: xray-daemon-svc
+  namespace: cloudmart-prod
+  labels:
+    app: xray-daemon
+spec:
+  selector:
+    app: xray-daemon
+  ports:
+    - name: xray-ingest-udp
+      port: 2000
+      targetPort: 2000
+      protocol: UDP
+    - name: xray-ingest-tcp
+      port: 2000
+      targetPort: 2000
+      protocol: TCP
+  clusterIP: None    # Headless — each pod routes to its own node's daemon
