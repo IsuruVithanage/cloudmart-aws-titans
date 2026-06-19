@@ -309,3 +309,80 @@ resource "helm_release" "kyverno" {
     value = "1"
   }
 }
+# ================================================
+# Automatically adjusts the node count (min=2, max=3) based on pod scheduling pressure.
+# Uses IRSA for AWS API access and autodiscovery mode for the EKS managed node group.
+# ================================================
+resource "kubernetes_service_account" "cluster_autoscaler" {
+  metadata {
+    name      = "cluster-autoscaler"
+    namespace = "kube-system"
+    annotations = {
+      "eks.amazonaws.com/role-arn" = var.cluster_autoscaler_role_arn
+    }
+    labels = {
+      "k8s-addon" = "cluster-autoscaler.addons.k8s.io"
+      "k8s-app"   = "cluster-autoscaler"
+    }
+  }
+  depends_on = [helm_release.aws_load_balancer_controller]
+}
+
+resource "helm_release" "cluster_autoscaler" {
+  name       = "cluster-autoscaler"
+  repository = "https://kubernetes.github.io/autoscaler"
+  chart      = "cluster-autoscaler"
+  namespace  = "kube-system"
+  version    = "9.37.0"
+  cleanup_on_fail = true
+  replace         = true
+
+  # Use existing service account (annotated with IRSA role above)
+  set {
+    name  = "rbac.serviceAccount.create"
+    value = "false"
+  }
+  set {
+    name  = "rbac.serviceAccount.name"
+    value = "cluster-autoscaler"
+  }
+
+  # Autodiscovery: finds the ASG by the EKS cluster tag
+  set {
+    name  = "autoDiscovery.clusterName"
+    value = var.cluster_name
+  }
+  set {
+    name  = "awsRegion"
+    value = "ap-south-1"
+  }
+
+  # Allow scale-down of nodes running system pods (excluding kube-system DaemonSets)
+  set {
+    name  = "extraArgs.skip-nodes-with-system-pods"
+    value = "false"
+  }
+
+  # Balance replicas evenly across node groups
+  set {
+    name  = "extraArgs.balance-similar-node-groups"
+    value = "true"
+  }
+
+  # Scale down after 2 minutes of a node being underutilised (default is 10 min — shortened for demo)
+  set {
+    name  = "extraArgs.scale-down-delay-after-add"
+    value = "2m"
+  }
+
+  # Emit cluster-autoscaler events to CloudWatch (picked up by Container Insights)
+  set {
+    name  = "extraArgs.emit-per-nodegroup-metrics"
+    value = "true"
+  }
+
+  depends_on = [
+    kubernetes_service_account.cluster_autoscaler,
+    helm_release.aws_load_balancer_controller,
+  ]
+}

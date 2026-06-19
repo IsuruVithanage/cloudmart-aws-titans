@@ -23,6 +23,34 @@ resource "aws_cloudwatch_log_group" "product_service" {
   tags              = var.tags
 }
 
+# Log group for order-service — Section 3.6 [M]
+resource "aws_cloudwatch_log_group" "order_service" {
+  name              = "/aws/containerinsights/${var.cluster_name}/application/order-service"
+  retention_in_days = 7
+  tags              = var.tags
+}
+
+# Log group for user-service — Section 3.6 [M]
+resource "aws_cloudwatch_log_group" "user_service" {
+  name              = "/aws/containerinsights/${var.cluster_name}/application/user-service"
+  retention_in_days = 7
+  tags              = var.tags
+}
+
+# Log group for notification-service — Section 3.6 [M]
+resource "aws_cloudwatch_log_group" "notification_service" {
+  name              = "/aws/containerinsights/${var.cluster_name}/application/notification-service"
+  retention_in_days = 7
+  tags              = var.tags
+}
+
+# Log group for frontend — Section 3.6 [M]
+resource "aws_cloudwatch_log_group" "frontend" {
+  name              = "/aws/containerinsights/${var.cluster_name}/application/frontend"
+  retention_in_days = 7
+  tags              = var.tags
+}
+
 resource "aws_cloudwatch_log_metric_filter" "product_5xx_errors" {
   name           = "cloudmart-product-service-5xx"
   log_group_name = aws_cloudwatch_log_group.product_service.name
@@ -227,6 +255,27 @@ resource "aws_cloudwatch_dashboard" "cloudmart" {
           region = var.region
           metrics = [
             ["CloudMart/Orders", "OrdersCreated", "Service", "order-service", "Environment", "prod", { label = "Orders/min", stat = "Sum", color = "#7B1FA2" }],
+          ]
+          view   = "timeSeries"
+          stacked = false
+          period = 60
+          stat   = "Sum"
+        }
+      },
+
+      # ---- Row 4: HTTP Request Rate (product-service) — Section 3.6 [M] ----
+      {
+        type   = "metric"
+        x      = 0
+        y      = 18
+        width  = 24
+        height = 6
+        properties = {
+          title  = "HTTP Request Rate — product-service (requests/min)"
+          region = var.region
+          metrics = [
+            ["CloudMart/Application", "ProductServiceRequestCount", { label = "Total Requests", stat = "Sum", color = "#00897B", period = 60 }],
+            ["CloudMart/Application", "ProductService5xxCount",    { label = "5xx Errors",      stat = "Sum", color = "#E53935", period = 60 }],
           ]
           view   = "timeSeries"
           stacked = false

@@ -200,3 +200,59 @@ module "iam_eks_role_keda" {
   }
   role_policy_arns = { sqs = "arn:aws:iam::aws:policy/AmazonSQSFullAccess" }
 }
+
+# Scoped to EC2/ASG describe actions + resize actions on ASGs tagged with this cluster
+module "iam_eks_role_cluster_autoscaler" {
+  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version   = "~> 5.39"
+  role_name = "cloudmart-cluster-autoscaler-role"
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:cluster-autoscaler"]
+    }
+  }
+  role_policy_arns = { policy = aws_iam_policy.cluster_autoscaler.arn }
+}
+
+resource "aws_iam_policy" "cluster_autoscaler" {
+  name        = "cloudmart-cluster-autoscaler-policy"
+  description = "Least-privilege policy for EKS Cluster Autoscaler"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      # Read-only describe actions (no resource restriction needed)
+      {
+        Effect = "Allow",
+        Action = [
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeAutoScalingInstances",
+          "autoscaling:DescribeLaunchConfigurations",
+          "autoscaling:DescribeScalingActivities",
+          "autoscaling:DescribeTags",
+          "ec2:DescribeLaunchTemplateVersions",
+          "ec2:DescribeImages",
+          "ec2:DescribeInstanceTypes",
+          "ec2:GetInstanceTypesFromInstanceRequirements",
+          "eks:DescribeNodegroup"
+        ],
+        Resource = "*"
+      },
+      # Write actions scoped to ASGs belonging to this cluster (via tag condition)
+      {
+        Effect = "Allow",
+        Action = [
+          "autoscaling:SetDesiredCapacity",
+          "autoscaling:TerminateInstanceInAutoScalingGroup"
+        ],
+        Resource = "*",
+        Condition = {
+          StringEquals = {
+            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/enabled"    = "true",
+            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
+          }
+        }
+      }
+    ]
+  })
+}

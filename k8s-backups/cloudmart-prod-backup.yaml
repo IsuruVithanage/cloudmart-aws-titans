@@ -1,5 +1,28 @@
+# =============================================================
+# cloudmart-prod-backup.yaml
+#
+# This file is regenerated automatically by k8s-backups/backup.sh
+# whenever the CI/CD pipeline runs (see .github/workflows/cd.yml).
+#
+# To regenerate manually:
+#   ./k8s-backups/backup.sh
+#
+# Resources captured:
+#   - Deployments, ReplicaSets, Pods
+#   - Services, ConfigMaps, Secrets, ServiceAccounts
+#   - HorizontalPodAutoscalers, PodDisruptionBudgets
+#   - NetworkPolicies, Ingresses
+#   - ScaledObjects, TriggerAuthentications (KEDA)
+#   - ExternalSecrets, SecretStores (ESO)
+#
+# Namespace: cloudmart-prod
+# Last manual update: Run backup.sh against a live cluster to populate.
+# =============================================================
 apiVersion: v1
 items: []
 kind: List
 metadata:
   resourceVersion: ""
+  annotations:
+    cloudmart.io/backup-note: "Run ./k8s-backups/backup.sh against the live cluster to populate this file"
+    cloudmart.io/section: "Kubernetes manifest backup"
