@@ -308,6 +308,34 @@ resource "helm_release" "kyverno" {
     name  = "reportsController.replicas"
     value = "1"
   }
+
+  # Override admissionReports cleanup image
+  set {
+    name  = "cleanupJobs.admissionReports.image.registry"
+    value = "registry.k8s.io"
+  }
+  set {
+    name  = "cleanupJobs.admissionReports.image.repository"
+    value = "kubectl"
+  }
+  set {
+    name  = "cleanupJobs.admissionReports.image.tag"
+    value = "v1.28.5"
+  }
+
+  # Override clusterAdmissionReports cleanup image
+  set {
+    name  = "cleanupJobs.clusterAdmissionReports.image.registry"
+    value = "registry.k8s.io"
+  }
+  set {
+    name  = "cleanupJobs.clusterAdmissionReports.image.repository"
+    value = "kubectl"
+  }
+  set {
+    name  = "cleanupJobs.clusterAdmissionReports.image.tag"
+    value = "v1.28.5"
+  }
 }
 # ================================================
 # Automatically adjusts the node count (min=2, max=3) based on pod scheduling pressure.
