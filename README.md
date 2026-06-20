@@ -5,13 +5,13 @@
 Amazon Web Services (AWS) — Region: ap-south-1 (Mumbai)
 
 ## Team Members & Contributions
-| Member | Responsibility |
-|--------|---------------|
-| Isuru Vithanage | Infrastructure Foundation (Terraform, VPC, EKS, Networking) |
-| [Member 2] | Containerisation & Kubernetes Deployments |
-| [Member 3] | CI/CD Pipeline |
-| [Member 4] | Security & Observability |
-| [Member 5] | Cost Management & Disaster Recovery |
+| Member            | Responsibility                                              |
+|-------------------|-------------------------------------------------------------|
+| Isuru Vithanage   | Infrastructure Foundation (Terraform, VPC, EKS, Networking) |
+| Kavith Rashintha  | Kubernetes Deployments & Observability                      |
+| Ashan Salinda     | Containerisation & Security                                 |
+| Ushan Priyashanka | CI/CD Pipeline & Cost Management                            |
+| Savith Abeyrathne | Disaster Recovery                                           |
 
 ## Architecture Summary
 - **VPC**: 10.0.0.0/16 across ap-south-1a and ap-south-1b
